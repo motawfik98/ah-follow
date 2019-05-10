@@ -9,7 +9,7 @@ import (
 func InitDB() (*gorm.DB, error) {
 	db, err := gorm.Open("mssql", "sqlserver://remote:mohamed@localhost:1433?database=ah_follow")
 	if err == nil {
-		db.AutoMigrate(&models.User{})
+		db.AutoMigrate(&models.User{}, &models.Task{})
 	}
 	return db, err
 }
