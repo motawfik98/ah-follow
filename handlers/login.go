@@ -16,9 +16,10 @@ type MyDB struct {
 func (db *MyDB) showLoginPage(c echo.Context) error {
 	status, message := getFlashMessages(&c)
 	return c.Render(http.StatusOK, "login.html", echo.Map{
-		"status":  status,
-		"message": message,
-		"title":   "تسجيل دخول",
+		"status":     status,
+		"message":    message,
+		"title":      "تسجيل دخول",
+		"hideNavBar": true,
 	})
 }
 

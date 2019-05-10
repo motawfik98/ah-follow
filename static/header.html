@@ -17,8 +17,13 @@
                 crossorigin="anonymous"></script>
         <link rel="stylesheet" href="css/app.css">
         <title>{{ index . "title"}}</title>
+
+
     </head>
     <body>
+    {{ if not .hideNavBar}}
+        {{template "navbar". }}
+    {{end}}
 
     {{template "flash-message".}}
 
