@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"../models"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo-contrib/session"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"time"
 )
 
 type MyDB struct {
@@ -16,8 +14,11 @@ type MyDB struct {
 }
 
 func (db *MyDB) showLoginPage(c echo.Context) error {
-	return c.JSON(http.StatusOK, gin.H{
-		"title": "تسجيل دخول",
+	status, message := getFlashMessages(&c)
+	return c.Render(http.StatusOK, "login.html", echo.Map{
+		"status":  status,
+		"message": message,
+		"title":   "تسجيل دخول",
 	})
 }
 
@@ -26,58 +27,30 @@ func (db *MyDB) performLogin(c echo.Context) error {
 	_ = c.Bind(&loginData)
 	db.GormDB.Where("username = ?",
 		loginData.Username).First(&user)
-	if user.ID == 0 {
-		return c.JSON(http.StatusTemporaryRedirect, gin.H{
-			"flashStatus":  "failure",
-			"flashMessage": "بيانات الدخول ليست صحيحه",
-			"url":          "/login",
-		})
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
+	if user.ID == 0 || err != nil {
+		sess := getSession("flash", &c)
+		sess.AddFlash("failure", "status")
+		sess.AddFlash("يانات الدخول ليست صحيحه", "message")
+		_ = sess.Save(c.Request(), c.Response())
+		return c.Redirect(http.StatusFound, "/login")
 	} else {
-
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
-			return c.JSON(http.StatusTemporaryRedirect, gin.H{
-				"flashStatus":  "failure",
-				"flashMessage": "بيانات الدخول ليست صحيحه",
-				"url":          "/login",
-			})
-		} else {
-			err := setCookie(&c, user.ID)
-			if err != nil {
-				return err
-			}
-			return c.JSON(http.StatusTemporaryRedirect, gin.H{
-				"url": "/",
-			})
+		err := addSession(&c, user.ID)
+		if err != nil {
+			return err
 		}
+		return c.Redirect(http.StatusFound, "/")
 	}
 }
 
-func setCookie(c *echo.Context, id uint) error {
-	token := jwt.New(jwt.SigningMethodHS256)
-
-	// Set claims
-	claims := token.Claims.(jwt.MapClaims)
-	claims["user_id"] = id
-	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
-
-	// Generate encoded token and send it as response.
-	t, err := token.SignedString([]byte("secret"))
-	if err != nil {
-		return err
-	}
-	(*c).SetCookie(&http.Cookie{
-		Name:  "Authorization",
-		Value: t,
-	})
-	return nil
+func addSession(context *echo.Context, id uint) error {
+	sess := getSession("authorization", context)
+	sess.Values["user_id"] = id
+	return sess.Save((*context).Request(), (*context).Response())
 }
 
 func logout(c echo.Context) error {
-	c.SetCookie(&http.Cookie{
-		Name:    "Authorization",
-		Expires: time.Now(),
-	})
-	return c.JSON(http.StatusTemporaryRedirect, map[string]string{
-		"url": "/login",
-	})
+	sess, _ := session.Get("authorization", c)
+	deleteSession(sess, c)
+	return c.Redirect(http.StatusFound, "/login")
 }
