@@ -1,22 +1,39 @@
-var editor; // use a global for the submit and return data rendering in the examples
+let editor; // use a global for the submit and return data rendering in the examples
+
+let cols = [
+    {data: "description", name: "description"},
+    {data: "sent_to", name:"sent_to"},
+    {data: "followed_by", name: "followed_by"},
+    {data: "action_taken", name:"action_taken"},
+    {
+        data: "CreatedAt",
+        render: function(data, type, row, meta) {
+            return data.substring(0, 10)
+        },
+        name: "created_at"
+    }
+];
 
 $(document).ready(function () {
     editor = new $.fn.dataTable.Editor({
         table: "#baseTable",
+        ajax: "/tasksHandler",
+        idSrc: "ID",
+        legacyAjax: true,
         fields: [{
             label: "التكليف:",
             name: "description",
             type: "textarea"
         }, {
             label: "القائم به:",
-            name: "sentTo",
+            name: "sent_to",
             type: "textarea",
         }, {
             label: "المتابع:",
-            name: "followedBy"
+            name: "followed_by"
         }, {
             label: "الموقف",
-            name: "actionTaken"
+            name: "action_taken"
         }],
         i18n: {
             create: {
@@ -46,8 +63,13 @@ $(document).ready(function () {
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
+        rowId: "ID",
+        processing: true,
+        serverSide: true,
+        ajax: "/getData",
+        columns: cols,
         dom: 'Bfrtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
-        select: true,     // enable single row selection
+        select: {style: 'single'},     // enable single row selection
         buttons: [
             {extend: "create", editor: editor},
             {extend: "edit", editor: editor},

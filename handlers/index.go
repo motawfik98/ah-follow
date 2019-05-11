@@ -5,10 +5,11 @@ import (
 	"net/http"
 )
 
-func index(c echo.Context) error {
+func (db *MyDB) index(c echo.Context) error {
+
 	status, message := getFlashMessages(&c)
 	return c.Render(http.StatusOK, "index.html", echo.Map{
-		"title":   "الرأييسيه",
+		"title":   "الرأيسيه",
 		"status":  status,
 		"message": message,
 	})
