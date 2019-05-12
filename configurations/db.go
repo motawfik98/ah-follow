@@ -10,6 +10,7 @@ func InitDB() (*gorm.DB, error) {
 	db, err := gorm.Open("mssql", "sqlserver://remote:mohamed@localhost:1433?database=ah_follow")
 	if err == nil {
 		db.AutoMigrate(&models.User{}, &models.Task{})
+		db.AutoMigrate(&models.Person{}).AddForeignKey("task_id", "tasks(id)", "CASCADE", "CASCADE")
 	}
 	return db, err
 }

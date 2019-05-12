@@ -5,12 +5,10 @@ import (
 )
 
 type Task struct {
-	//DT_RowId	string `json:"DT_RowId"`
 	gorm.Model
 	Description string `gorm:"not null" form:"description" json:"description"`
-	SentTo      string `gorm:"not null" form:"sent_to" json:"sent_to"`
 	FollowedBy  string `form:"followed_by" json:"followed_by"`
-	ActionTaken string `form:"action_taken" json:"action_taken"`
+	People      []Person
 	Hash        string
 }
 

@@ -15,9 +15,9 @@ type datatableTask struct {
 func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("data[description]"),
-		SentTo:      c.FormValue("data[sent_to]"),
-		FollowedBy:  c.FormValue("data[followed_by]"),
-		ActionTaken: c.FormValue("data[action_taken]"),
+		//SentTo:      c.FormValue("data[sent_to]"),
+		FollowedBy: c.FormValue("data[followed_by]"),
+		//ActionTaken: c.FormValue("data[action_taken]"),
 	}
 	db.GormDB.Create(&taskToSave)
 	dataArray := make([]interface{}, 1)
@@ -35,9 +35,9 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	}
 	updatedValues := models.Task{
 		Description: c.FormValue("data[description]"),
-		SentTo:      c.FormValue("data[sent_to]"),
-		FollowedBy:  c.FormValue("data[followed_by]"),
-		ActionTaken: c.FormValue("data[action_taken]"),
+		//SentTo:      c.FormValue("data[sent_to]"),
+		FollowedBy: c.FormValue("data[followed_by]"),
+		//ActionTaken: c.FormValue("data[action_taken]"),
 	}
 	var task models.Task
 	db.GormDB.First(&task, id)
