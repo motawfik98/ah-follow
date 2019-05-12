@@ -12,53 +12,51 @@ type datatableTask struct {
 	Data []interface{} `json:"data"`
 }
 
-func (db *MyDB) HandleTasks(c echo.Context) error {
-
-	switch c.FormValue("action") {
-	case "create":
-		taskToSave := models.Task{
-			Description: c.FormValue("data[description]"),
-			SentTo:      c.FormValue("data[sent_to]"),
-			FollowedBy:  c.FormValue("data[followed_by]"),
-			ActionTaken: c.FormValue("data[action_taken]"),
-		}
-		db.GormDB.Create(&taskToSave)
-		dataArray := make([]interface{}, 1)
-		dataArray[0] = taskToSave
-		datatableTask := datatableTask{dataArray}
-		return c.JSONPretty(http.StatusOK, datatableTask, " ")
-	case "edit":
-		id, err := strconv.Atoi(c.FormValue("id"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"message": "Invalid Request",
-			})
-		}
-		updatedValues := models.Task{
-			Description: c.FormValue("data[description]"),
-			SentTo:      c.FormValue("data[sent_to]"),
-			FollowedBy:  c.FormValue("data[followed_by]"),
-			ActionTaken: c.FormValue("data[action_taken]"),
-		}
-		var task models.Task
-		db.GormDB.First(&task, id)
-		db.GormDB.Model(&task).Updates(updatedValues)
-		dataArray := make([]interface{}, 1)
-		dataArray[0] = task
-		datatableTask := datatableTask{dataArray}
-		return c.JSONPretty(http.StatusOK, datatableTask, " ")
-	case "remove":
-		id, err := strconv.Atoi(c.FormValue("id[]"))
-		if err != nil || id == 0 {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"message": "Invalid Request",
-			})
-		}
-		db.GormDB.Delete(models.Task{}, "id = ?", id)
-		return c.JSON(http.StatusOK, models.Task{})
-	default:
-		return nil
+func (db *MyDB) AddTask(c echo.Context) error {
+	taskToSave := models.Task{
+		Description: c.FormValue("data[description]"),
+		SentTo:      c.FormValue("data[sent_to]"),
+		FollowedBy:  c.FormValue("data[followed_by]"),
+		ActionTaken: c.FormValue("data[action_taken]"),
 	}
+	db.GormDB.Create(&taskToSave)
+	dataArray := make([]interface{}, 1)
+	dataArray[0] = taskToSave
+	datatableTask := datatableTask{dataArray}
+	return c.JSONPretty(http.StatusOK, datatableTask, " ")
+}
+
+func (db *MyDB) EditTask(c echo.Context) error {
+	id, err := strconv.Atoi(c.FormValue("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid Request",
+		})
+	}
+	updatedValues := models.Task{
+		Description: c.FormValue("data[description]"),
+		SentTo:      c.FormValue("data[sent_to]"),
+		FollowedBy:  c.FormValue("data[followed_by]"),
+		ActionTaken: c.FormValue("data[action_taken]"),
+	}
+	var task models.Task
+	db.GormDB.First(&task, id)
+	db.GormDB.Model(&task).Updates(updatedValues)
+	dataArray := make([]interface{}, 1)
+	dataArray[0] = task
+	datatableTask := datatableTask{dataArray}
+	return c.JSONPretty(http.StatusOK, datatableTask, " ")
+}
+
+func (db *MyDB) RemoveTask(c echo.Context) error {
+	id, err := strconv.Atoi(c.FormValue("id[]"))
+	if err != nil || id == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid Request",
+		})
+	}
+	db.GormDB.Delete(models.Task{}, "id = ?", id)
+	return c.JSON(http.StatusOK, models.Task{})
 }
 
 func (db *MyDB) GetTasks(c echo.Context) error {
@@ -72,11 +70,16 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	sortedColumnName := q[sprintf][0]
 	searchValue := q["search[value]"][0]
 	fmt.Println(direction, sprintf, searchValue, sortedColumnName)
-	tasks, totalNumberOfRows := models.GetAllTasks(db.GormDB, start, length, sortedColumnName, direction)
+	descriptionSearch := q["description"][0]
+	followedBySearch := q["followed_by"][0]
+	minDateSearch := q["min_date"][0]
+	maxDateSearch := q["max_date"][0]
+	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter := models.GetAllTasks(db.GormDB, start, length,
+		sortedColumnName, direction, descriptionSearch, followedBySearch, minDateSearch, maxDateSearch)
 	dt := dtOutput{
 		Draw:            draw,
-		RecordsTotal:    totalNumberOfRows,
-		RecordsFiltered: totalNumberOfRows,
+		RecordsTotal:    totalNumberOfRowsInDatabase,
+		RecordsFiltered: totalNumberOfRowsAfterFilter,
 		Data:            tasks,
 	}
 	return c.JSONPretty(http.StatusOK, dt, " ")

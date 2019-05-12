@@ -1,13 +1,21 @@
 let editor; // use a global for the submit and return data rendering in the examples
 
 let cols = [
+    {
+        data: "description",
+        orderable: false,
+        className: 'select-checkbox',
+        render: function () {
+            return ''
+        }
+    },
     {data: "description", name: "description"},
-    {data: "sent_to", name:"sent_to"},
+    {data: "sent_to", name: "sent_to"},
     {data: "followed_by", name: "followed_by"},
-    {data: "action_taken", name:"action_taken"},
+    {data: "action_taken", name: "action_taken"},
     {
         data: "CreatedAt",
-        render: function(data, type, row, meta) {
+        render: function (data, type, row, meta) {
             return data.substring(0, 10)
         },
         name: "created_at"
@@ -15,9 +23,28 @@ let cols = [
 ];
 
 $(document).ready(function () {
+    $(".datepicker").datepicker({
+        format: 'yyyy-mm-dd'
+    });
+    $("#resetSearch").on('click', function() {
+        $('#searchForm')[0].reset();
+        $('.search').trigger("change");
+        return false;
+    });
     editor = new $.fn.dataTable.Editor({
         table: "#baseTable",
-        ajax: "/tasksHandler",
+        ajax: {
+            create: {
+                type: 'POST',
+                url: '/tasks/add'
+            }, edit: {
+                type: 'POST',
+                url: '/tasks/edit'
+            }, remove: {
+                type: 'POST',
+                url: '/tasks/remove'
+            }
+        },
         idSrc: "ID",
         legacyAjax: true,
         fields: [{
@@ -59,21 +86,43 @@ $(document).ready(function () {
     });
 
 
-    $('#baseTable').DataTable({
+    let myTable = $('#baseTable').DataTable({
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
+        order: [[5, 'asc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
-        ajax: "/getData",
+        ajax: {
+            url: "/getData",
+            data: function(d) {
+                return $.extend({}, d, {
+                    "description": $("#description").val(),
+                    "followed_by": $("#followed_by").val(),
+                    "min_date": $("#min").val(),
+                    "max_date": $("#max").val()
+                });
+            }
+        },
         columns: cols,
-        dom: 'Bfrtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
-        select: {style: 'single'},     // enable single row selection
+        dom: 'Brtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
+        select: {
+            style:    'os',
+            selector: 'td:first-child'
+        },     // enable single row selection
         buttons: [
             {extend: "create", editor: editor},
             {extend: "edit", editor: editor},
-            {extend: "remove", editor: editor }
+            {extend: "remove", editor: editor}
         ]
     });
+    search(myTable);
 });
+
+function search(table) {
+    $(".search").on('keyup change', function () {
+        table.draw()
+    });
+
+}

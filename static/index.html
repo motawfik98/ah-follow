@@ -2,10 +2,12 @@
 
     {{template "header".}}
 
-    <h1>التكاليف</h1>
+    <h1 class="d-inline">التكاليف</h1>
+    {{ template "search". }}
     <table id="baseTable" class="table table-striped display" style="width:100%">
         <thead class="thead-dark">
         <tr>
+            <th></th>
             <th>التكليف</th>
             <th>القائم به</th>
             <th>المتابع</th>
@@ -17,6 +19,7 @@
         </tbody>
         <tfoot>
         <tr>
+            <th></th>
             <th>التكليف</th>
             <th>القائم به</th>
             <th>المتابع</th>

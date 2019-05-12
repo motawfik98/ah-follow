@@ -21,10 +21,29 @@ func (task *Task) AfterCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string) ([]Task, int) {
+func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string,
+	descriptionSearch string, followedBySearch string, minDateSearch string, maxDateSearch string) ([]Task, int, int) {
 	var tasks []Task
+	if descriptionSearch != "" {
+		descriptionSearch = "%" + descriptionSearch + "%"
+		db = db.Where("description LIKE ?", descriptionSearch)
+	}
+	if followedBySearch != "" {
+		followedBySearch = "%" + followedBySearch + "%"
+		db = db.Where("followed_by LIKE ?", followedBySearch)
+	}
+	if minDateSearch != "" {
+		minDateSearch = minDateSearch + " 00:00:00.0000000 +02:00"
+		db = db.Where("created_at >= ?", minDateSearch)
+	}
+	if maxDateSearch != "" {
+		maxDateSearch = maxDateSearch + " 00:00:00.0000000 +02:00"
+		db = db.Where("created_at <= ?", maxDateSearch)
+	}
+	var totalNumberOfRowsAfterFilter int
+	db.Find(&tasks).Count(&totalNumberOfRowsAfterFilter)
 	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
-	var totalNumberOfRows int
-	db.Model(&Task{}).Count(&totalNumberOfRows)
-	return tasks, totalNumberOfRows
+	var totalNumberOfRowsInDatabase int
+	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
+	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
 }

@@ -1,0 +1,36 @@
+{{ define "search" }}
+    <div class="btn-group float-right" roleValue="group" aria-label="Basic example">
+        <a class="mr-3" id="resetSearch" href="">الغاء البحث</a>
+        <button class="btn btn-secondary mr-3"
+                data-toggle="collapse" data-target="#searchCollapse"
+                aria-expanded="false" aria-controls="searchCollapse">بحث
+        </button>
+    </div>
+
+    <div class="collapse" id="searchCollapse">
+        <form id="searchForm">
+
+            <div class="form-row">
+                <div class="form-group col">
+                    <label for="description">التكليف</label>
+                    <textarea class="form-control search" id="description"></textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-6">
+                    <label for="followed_by">المتابع</label>
+                    <input type="text" class="form-control search" id="followed_by" placeholder="المتابع"/>
+                </div>
+                <div class="form-group col">
+                    <label for="min">من</label>
+                    <input type="text" class="form-control search datepicker" id="min" placeholder="من"/>
+                </div>
+                <div class="form-group col">
+                    <label for="max">الى</label>
+                    <input type="text" class="form-control search datepicker" id="max" placeholder="الى"/>
+                </div>
+            </div>
+        </form>
+    </div>
+{{end}}
+

@@ -12,6 +12,8 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.GET("/logout", logout, ensureLoggedIn)
 	e.GET("/", db.index, ensureLoggedIn)
 
-	e.POST("/tasksHandler", db.HandleTasks)
+	e.POST("/tasks/add", db.AddTask)
+	e.POST("/tasks/edit", db.EditTask)
+	e.POST("/tasks/remove", db.RemoveTask)
 	e.GET("/getData", db.GetTasks)
 }
