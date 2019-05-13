@@ -1,4 +1,5 @@
 let editor; // use a global for the submit and return data rendering in the examples
+let myTable;
 
 let cols = [
     {
@@ -30,13 +31,16 @@ $(document).ready(function () {
     $(".datepicker").datepicker({
         format: 'yyyy-mm-dd'
     });
-
-    $("#czContainer").czMore();
-
     $("#resetSearch").on('click', function () {
         $('#searchForm')[0].reset();
         $('.search').trigger("change");
         return false;
+    });
+    $("#czContainer").czMore({
+        onDelete: function (id) {
+            $.post('/tasks/removeChild', {id: id});
+            myTable.draw();
+        }
     });
 
 
@@ -89,7 +93,7 @@ $(document).ready(function () {
     });
 
 
-    let myTable = $('#baseTable').DataTable({
+    myTable = $('#baseTable').DataTable({
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
@@ -120,19 +124,42 @@ $(document).ready(function () {
             {extend: "remove", editor: editor}
         ]
     });
-    search(myTable);
+
+    search();
     sendExtraFormData();
-    showHideChild(myTable);
+    showHideChild();
+    showPeopleActions();
 });
 
-function search(table) {
+
+function showPeopleActions() {
+    editor.on('open', function (e, type) {
+        $('#czContainer').empty();
+        const modifier = editor.modifier();
+
+        if (modifier) {
+            const data = myTable.row(modifier).data();
+            for (let i = 1; i <= data.people.length; i++) {
+                $('#btnPlus').trigger('click');
+                $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
+                $('#name_' + i + '_repeat').val(data.people[i - 1].name);
+                $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
+            }
+        }
+    });
+}
+
+
+function search() {
     $(".search").on('keyup change', function () {
-        table.draw()
+        myTable.draw()
     });
 }
 
 function sendExtraFormData() {
     editor.on('preSubmit', function (e, data, action) {
+        if (action === 'remove')
+            return;
         const numberOfExtraFields = $('#czContainer_czMore_txtCount').val();
         for (let i = 1; i <= numberOfExtraFields; i += 1) {
             let firstInputName = 'name_' + i + '_repeat';
@@ -145,13 +172,13 @@ function sendExtraFormData() {
 }
 
 
-function showHideChild(table) {
+function showHideChild() {
     // Array to track the ids of the details displayed rows
     const detailRows = [];
 
     $('#baseTable tbody').on('click', 'tr td.details-control', function () {
         const tr = $(this).closest('tr');
-        const row = table.row(tr);
+        const row = myTable.row(tr);
         const idx = $.inArray(tr.attr('id'), detailRows);
 
         if (row.child.isShown()) {
@@ -172,7 +199,7 @@ function showHideChild(table) {
     });
 
     // On each draw, loop over the `detailRows` array and show any child rows
-    table.on('draw', function () {
+    myTable.on('draw', function () {
         $.each(detailRows, function (i, id) {
             $('#' + id + ' td.details-control').trigger('click');
         });

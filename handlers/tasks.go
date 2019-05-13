@@ -24,15 +24,11 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	for i := 1; i <= totalPeople; i++ {
 		name := "data[name_" + strconv.Itoa(i) + "_repeat]"
 		action := "data[action_" + strconv.Itoa(i) + "_repeat]"
-		person := models.Person{
-			Name:        c.FormValue(name),
-			ActionTaken: c.FormValue(action),
-			TaskID:      int(taskToSave.ID),
-		}
-		db.GormDB.Create(&person)
+		models.CreatePerson(db.GormDB,
+			c.FormValue(name), c.FormValue(action), int(taskToSave.ID))
 	}
 
-	db.GormDB.Preload("People").Find(&taskToSave, taskToSave.ID)
+	db.GormDB.Find(&taskToSave, taskToSave.ID)
 
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = taskToSave
@@ -54,6 +50,23 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	var task models.Task
 	db.GormDB.First(&task, id)
 	db.GormDB.Model(&task).Updates(updatedValues)
+
+	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
+
+	for i := 1; i <= totalPeople; i++ {
+		var person models.Person
+		name := "data[name_" + strconv.Itoa(i) + "_repeat]"
+		action := "data[action_" + strconv.Itoa(i) + "_repeat]"
+		db.GormDB.Where("name = ? AND task_id = ?",
+			c.FormValue(name), id).Find(&person)
+		if person.ID == 0 {
+			models.CreatePerson(db.GormDB, c.FormValue(name), c.FormValue(action), id)
+		} else {
+			person.ActionTaken = c.FormValue(action)
+			db.GormDB.Save(&person)
+		}
+	}
+
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = task
 	datatableTask := datatableTask{dataArray}
@@ -67,8 +80,17 @@ func (db *MyDB) RemoveTask(c echo.Context) error {
 			"message": "Invalid Request",
 		})
 	}
-	db.GormDB.Delete(models.Task{}, "id = ?", id)
+	var task models.Task
+	db.GormDB.First(&task, id)
+	task.DeleteChildren(db.GormDB)
+	db.GormDB.Delete(&task)
 	return c.JSON(http.StatusOK, models.Task{})
+}
+
+func (db *MyDB) RemoveChild(c echo.Context) error {
+	personId, _ := strconv.Atoi(c.FormValue("id"))
+	db.GormDB.Delete(models.Person{}, "id = ?", personId)
+	return nil
 }
 
 func (db *MyDB) GetTasks(c echo.Context) error {

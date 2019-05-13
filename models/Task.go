@@ -8,7 +8,7 @@ type Task struct {
 	gorm.Model
 	Description string   `gorm:"not null" form:"description" json:"description"`
 	FollowedBy  string   `form:"followed_by" json:"followed_by"`
-	People      []Person `gorm:"auto_preload" json:"people"`
+	People      []Person `json:"people"`
 	Hash        string
 }
 
@@ -17,6 +17,12 @@ func (task *Task) AfterCreate(scope *gorm.Scope) error {
 	hash := generateHash(ID)
 	scope.DB().Model(task).Updates(Task{Hash: hash})
 	return nil
+}
+
+func (task *Task) DeleteChildren(db *gorm.DB) {
+	for i := 0; i < len(task.People); i++ {
+		db.Delete(task.People[i])
+	}
 }
 
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string,

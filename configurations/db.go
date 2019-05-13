@@ -11,6 +11,7 @@ func InitDB() (*gorm.DB, error) {
 	if err == nil {
 		db.AutoMigrate(&models.User{}, &models.Task{})
 		db.AutoMigrate(&models.Person{}).AddForeignKey("task_id", "tasks(id)", "CASCADE", "CASCADE")
+		db = db.Set("gorm:auto_preload", true)
 	}
 	return db, err
 }

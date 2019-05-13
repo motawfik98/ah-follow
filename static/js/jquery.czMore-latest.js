@@ -144,14 +144,14 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
             function minusClick(recordset) {
                 $(recordset).children("#btnMinus").click(function () {
                     var i = obj.children(".recordset").length;
-                    var id = $(recordset).attr("data-id")
+                    var id = $(recordset).children().last().children().first().children().first().val();
                     $(recordset).remove();
                     resetNumbering();
                     obj.siblings("input[name$='czMore_txtCount']").val(obj.children(".recordset").length);
                     i--;
                     if (options.onDelete != null) {
-                        if (id != null)
-                            obj.trigger("onDelete", id);
+                        // if (id != null)
+                        obj.trigger("onDelete", id);
                     }
                 });
             }
