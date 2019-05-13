@@ -8,11 +8,15 @@ let cols = [
         render: function () {
             return ''
         }
-    },
-    {data: "description", name: "description"},
-    {data: "sent_to", name: "sent_to"},
+    }, {
+        class: "details-control",
+        orderable: false,
+        data: "description",
+        render: function () {
+            return '';
+        }
+    }, {data: "description", name: "description"},
     {data: "followed_by", name: "followed_by"},
-    {data: "action_taken", name: "action_taken"},
     {
         data: "CreatedAt",
         render: function (data, type, row, meta) {
@@ -26,13 +30,19 @@ $(document).ready(function () {
     $(".datepicker").datepicker({
         format: 'yyyy-mm-dd'
     });
-    $("#resetSearch").on('click', function() {
+
+    $("#czContainer").czMore();
+
+    $("#resetSearch").on('click', function () {
         $('#searchForm')[0].reset();
         $('.search').trigger("change");
         return false;
     });
+
+
     editor = new $.fn.dataTable.Editor({
         table: "#baseTable",
+        template: '#customForm',
         ajax: {
             create: {
                 type: 'POST',
@@ -52,15 +62,8 @@ $(document).ready(function () {
             name: "description",
             type: "textarea"
         }, {
-            label: "القائم به:",
-            name: "sent_to",
-            type: "textarea",
-        }, {
             label: "المتابع:",
             name: "followed_by"
-        }, {
-            label: "الموقف",
-            name: "action_taken"
         }],
         i18n: {
             create: {
@@ -90,13 +93,13 @@ $(document).ready(function () {
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
-        order: [[5, 'asc']],
+        order: [[4, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
         ajax: {
             url: "/getData",
-            data: function(d) {
+            data: function (d) {
                 return $.extend({}, d, {
                     "description": $("#description").val(),
                     "followed_by": $("#followed_by").val(),
@@ -108,7 +111,7 @@ $(document).ready(function () {
         columns: cols,
         dom: 'Brtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
         select: {
-            style:    'os',
+            style: 'os',
             selector: 'td:first-child'
         },     // enable single row selection
         buttons: [
@@ -118,11 +121,75 @@ $(document).ready(function () {
         ]
     });
     search(myTable);
+    sendExtraFormData();
+    showHideChild(myTable);
 });
 
 function search(table) {
     $(".search").on('keyup change', function () {
         table.draw()
     });
+}
 
+function sendExtraFormData() {
+    editor.on('preSubmit', function (e, data, action) {
+        const numberOfExtraFields = $('#czContainer_czMore_txtCount').val();
+        for (let i = 1; i <= numberOfExtraFields; i += 1) {
+            let firstInputName = 'name_' + i + '_repeat';
+            let secondInputName = 'action_' + i + '_repeat';
+            data.data['totalPeople'] = numberOfExtraFields;
+            data.data[firstInputName] = $('#' + firstInputName).val();
+            data.data[secondInputName] = $('#' + secondInputName).val();
+        }
+    })
+}
+
+
+function showHideChild(table) {
+    // Array to track the ids of the details displayed rows
+    const detailRows = [];
+
+    $('#baseTable tbody').on('click', 'tr td.details-control', function () {
+        const tr = $(this).closest('tr');
+        const row = table.row(tr);
+        const idx = $.inArray(tr.attr('id'), detailRows);
+
+        if (row.child.isShown()) {
+            tr.removeClass('details');
+            row.child.hide();
+
+            // Remove from the 'open' array
+            detailRows.splice(idx, 1);
+        } else {
+            tr.addClass('details');
+            row.child(format(row.data())).show();
+
+            // Add to the 'open' array
+            if (idx === -1) {
+                detailRows.push(tr.attr('id'));
+            }
+        }
+    });
+
+    // On each draw, loop over the `detailRows` array and show any child rows
+    table.on('draw', function () {
+        $.each(detailRows, function (i, id) {
+            $('#' + id + ' td.details-control').trigger('click');
+        });
+    });
+}
+
+function format(d) {
+    let innerTable = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px; width: 80%">';
+    innerTable += '<thead><tr>';
+    innerTable += '<th>القائم به</th><th>الموقف</th>';
+    innerTable += '</tr></head><tbody>';
+    for (var i = 0; i < d.people.length; i++) {
+        innerTable += '<tr>';
+        innerTable += ('<td>' + d.people[i].name + '</td>');
+        innerTable += ('<td>' + d.people[i].action_taken + '</td>');
+        innerTable += '</tr>';
+    }
+    innerTable += '</tbody></table>';
+    return innerTable;
 }

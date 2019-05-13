@@ -6,9 +6,9 @@ import (
 
 type Task struct {
 	gorm.Model
-	Description string `gorm:"not null" form:"description" json:"description"`
-	FollowedBy  string `form:"followed_by" json:"followed_by"`
-	People      []Person
+	Description string   `gorm:"not null" form:"description" json:"description"`
+	FollowedBy  string   `form:"followed_by" json:"followed_by"`
+	People      []Person `gorm:"auto_preload" json:"people"`
 	Hash        string
 }
 
@@ -22,6 +22,7 @@ func (task *Task) AfterCreate(scope *gorm.Scope) error {
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string,
 	descriptionSearch string, followedBySearch string, minDateSearch string, maxDateSearch string) ([]Task, int, int) {
 	var tasks []Task
+	db = db.Preload("People")
 	if descriptionSearch != "" {
 		descriptionSearch = "%" + descriptionSearch + "%"
 		db = db.Where("description LIKE ?", descriptionSearch)

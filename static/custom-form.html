@@ -1,0 +1,34 @@
+{{define "custom-form"}}
+
+    <div id="customForm">
+
+        <editor-field name="description"></editor-field>
+
+        <fieldset class="border p-2">
+            <legend>القائم به</legend>
+
+            <div id="czContainer">
+                <div id="first">
+                    <div class="recordset">
+                        <div class="form-row m-3">
+                            <div class="col">
+                                <input type="text" name="name_1_repeat" class="form-control" id="name_1_repeat"
+                                       placeholder="الاسم">
+                            </div>
+                            <div class="col">
+                                <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"
+                                       placeholder="الموقف">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <editor-field name="followed_by"></editor-field>
+    </div>
+
+
+
+    <script src="js/jquery.czMore-latest.js" charset="utf-8"></script>
+
+{{end}}

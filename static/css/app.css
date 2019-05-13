@@ -14,3 +14,13 @@ div.DTED_Lightbox_Wrapper {
     margin-left: 0;
     width: auto;
 }
+
+td.details-control {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-image: url(https://datatables.net/examples/resources/details_open.png);
+}
+
+tr.details td.details-control {
+    background: url(https://datatables.net/examples/resources/details_close.png) no-repeat center center;
+}

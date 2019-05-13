@@ -15,11 +15,25 @@ type datatableTask struct {
 func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("data[description]"),
-		//SentTo:      c.FormValue("data[sent_to]"),
-		FollowedBy: c.FormValue("data[followed_by]"),
-		//ActionTaken: c.FormValue("data[action_taken]"),
+		FollowedBy:  c.FormValue("data[followed_by]"),
 	}
 	db.GormDB.Create(&taskToSave)
+
+	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
+
+	for i := 1; i <= totalPeople; i++ {
+		name := "data[name_" + strconv.Itoa(i) + "_repeat]"
+		action := "data[action_" + strconv.Itoa(i) + "_repeat]"
+		person := models.Person{
+			Name:        c.FormValue(name),
+			ActionTaken: c.FormValue(action),
+			TaskID:      int(taskToSave.ID),
+		}
+		db.GormDB.Create(&person)
+	}
+
+	db.GormDB.Preload("People").Find(&taskToSave, taskToSave.ID)
+
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = taskToSave
 	datatableTask := datatableTask{dataArray}
@@ -35,9 +49,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	}
 	updatedValues := models.Task{
 		Description: c.FormValue("data[description]"),
-		//SentTo:      c.FormValue("data[sent_to]"),
-		FollowedBy: c.FormValue("data[followed_by]"),
-		//ActionTaken: c.FormValue("data[action_taken]"),
+		FollowedBy:  c.FormValue("data[followed_by]"),
 	}
 	var task models.Task
 	db.GormDB.First(&task, id)
@@ -68,8 +80,6 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	direction := q["order[0][dir]"][0]
 	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber)
 	sortedColumnName := q[sprintf][0]
-	searchValue := q["search[value]"][0]
-	fmt.Println(direction, sprintf, searchValue, sortedColumnName)
 	descriptionSearch := q["description"][0]
 	followedBySearch := q["followed_by"][0]
 	minDateSearch := q["min_date"][0]

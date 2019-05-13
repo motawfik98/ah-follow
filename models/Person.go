@@ -4,8 +4,8 @@ import "github.com/jinzhu/gorm"
 
 type Person struct {
 	gorm.Model
-	Name        string
-	ActionTaken string
+	Name        string `json:"name"`
+	ActionTaken string `json:"action_taken"`
 	Hash        string
 	TaskID      int
 }
