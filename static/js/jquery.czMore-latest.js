@@ -63,7 +63,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                         if ($(this).length !== 0) {
                             const $formRow = $(this).children().last();
                             const $firstCol = $formRow.children().first();
-                            const $input = $firstCol.children().first();
+                            const $input = $firstCol.children().last();
                             if ($.trim($input.val()) === '') {
                                 error = true;
                             }
