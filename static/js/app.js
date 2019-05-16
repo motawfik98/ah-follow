@@ -28,6 +28,12 @@ let cols = [
 ];
 
 $(document).ready(function () {
+
+    $('.js-select2').select2({
+        placeholder: "الاسم",
+        dir: "rtl"
+    });
+
     $(".datepicker").datepicker({
         format: 'yyyy-mm-dd'
     });
@@ -129,22 +135,32 @@ $(document).ready(function () {
     sendExtraFormData();
     showHideChild();
     showPeopleActions();
+
+    $('#baseTable tbody').on('dblclick', 'tr', function () {
+        console.log(myTable.buttons());
+        editor.edit(this);
+    });
 });
 
 
 function showPeopleActions() {
     editor.on('open', function (e, type) {
+        let $selectedPeople = $('#selectedPeople');
+        $selectedPeople.val(null).trigger('change');
         $('#czContainer').empty();
+        const selectedPeopleIDs = [];
         const modifier = editor.modifier();
-
         if (modifier) {
             const data = myTable.row(modifier).data();
             for (let i = 1; i <= data.people.length; i++) {
                 $('#btnPlus').trigger('click');
                 $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
-                $('#name_' + i + '_repeat').val(data.people[i - 1].name);
+                selectedPeopleIDs.push(data.people[i - 1].user.ID);
+                $('#name_' + i + '_repeat').val(data.people[i - 1].user.name);
                 $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
             }
+            $selectedPeople.val(selectedPeopleIDs);
+            $selectedPeople.trigger('change'); // Notify any JS components that the value changed
         }
     });
 }
@@ -160,13 +176,12 @@ function sendExtraFormData() {
     editor.on('preSubmit', function (e, data, action) {
         if (action === 'remove')
             return;
-        const numberOfExtraFields = $('#czContainer_czMore_txtCount').val();
-        for (let i = 1; i <= numberOfExtraFields; i += 1) {
-            let firstInputName = 'name_' + i + '_repeat';
-            let secondInputName = 'action_' + i + '_repeat';
-            data.data['totalPeople'] = numberOfExtraFields;
-            data.data[firstInputName] = $('#' + firstInputName).val();
-            data.data[secondInputName] = $('#' + secondInputName).val();
+
+        let selectedPeople = $('#selectedPeople').val();
+        const numberOfExtraFields = selectedPeople.length;
+        data.data['totalPeople'] = numberOfExtraFields;
+        for (let i = 0; i < numberOfExtraFields; i += 1) {
+            data.data[i] = selectedPeople[i];
         }
     })
 }
@@ -213,7 +228,7 @@ function format(d) {
     innerTable += '</tr></head><tbody>';
     for (var i = 0; i < d.people.length; i++) {
         innerTable += '<tr>';
-        innerTable += ('<td>' + d.people[i].name + '</td>');
+        innerTable += ('<td>' + d.people[i].user.name + '</td>');
         innerTable += ('<td>' + d.people[i].action_taken + '</td>');
         innerTable += '</tr>';
     }

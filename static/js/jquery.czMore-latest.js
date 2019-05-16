@@ -44,16 +44,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
             var btnPlus = obj.siblings("#btnPlus");
 
             if (!options.styleOverride) {
-                btnPlus.css({
-                    'float': 'right',
-                    'border': '0px',
-                    'background-image': 'url("img/add.png")',
-                    'background-position': 'center center',
-                    'background-repeat': 'no-repeat',
-                    'height': '25px',
-                    'width': '25px',
-                    'cursor': 'pointer',
-                });
+
             }
 
             if (recordset.length) {
@@ -128,16 +119,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                 $(recordset).children().first().before(divMinus);
                 var btnMinus = $(recordset).children("#btnMinus");
                 if (!options.styleOverride) {
-                    btnMinus.css({
-                        'float': 'right',
-                        'border': '0px',
-                        'background-image': 'url("img/remove.png")',
-                        'background-position': 'center center',
-                        'background-repeat': 'no-repeat',
-                        'height': '25px',
-                        'width': '25px',
-                        'cursor': 'poitnter',
-                    });
+
                 }
             }
 
