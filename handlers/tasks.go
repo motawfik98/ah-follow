@@ -16,19 +16,24 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("data[description]"),
 		FollowedBy:  c.FormValue("data[followed_by]"),
+		People:      []*models.PersonTask{},
 	}
 	db.GormDB.Create(&taskToSave)
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
-
-	for i := 1; i <= totalPeople; i++ {
-		name := "data[name_" + strconv.Itoa(i) + "_repeat]"
-		action := "data[action_" + strconv.Itoa(i) + "_repeat]"
-		models.CreatePerson(db.GormDB,
-			c.FormValue(name), c.FormValue(action), int(taskToSave.ID))
+	//db.GormDB.Preload("People")
+	for i := 0; i < totalPeople; i++ {
+		id := c.FormValue("data[" + strconv.Itoa(i) + "]")
+		uid, _ := strconv.ParseUint(id, 10, 64)
+		personTask := models.PersonTask{
+			TaskID: taskToSave.ID,
+			Task:   &taskToSave,
+			UserID: uint(uid),
+		}
+		db.GormDB.Create(&personTask)
 	}
 
-	db.GormDB.Find(&taskToSave, taskToSave.ID)
+	db.GormDB.Preload("People").Find(&taskToSave, taskToSave.ID)
 
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = taskToSave
@@ -62,7 +67,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		if person.ID == 0 {
 			models.CreatePerson(db.GormDB, c.FormValue(name), c.FormValue(action), id)
 		} else {
-			person.ActionTaken = c.FormValue(action)
+
 			db.GormDB.Save(&person)
 		}
 	}

@@ -4,10 +4,8 @@ import "github.com/jinzhu/gorm"
 
 type Person struct {
 	gorm.Model
-	Name        string `json:"name"`
-	ActionTaken string `json:"action_taken"`
-	Hash        string
-	TaskID      int
+	Name string `json:"name"`
+	Hash string
 }
 
 func (person *Person) AfterCreate(scope *gorm.Scope) error {
@@ -19,9 +17,7 @@ func (person *Person) AfterCreate(scope *gorm.Scope) error {
 
 func CreatePerson(db *gorm.DB, name string, actionTaken string, id int) {
 	person := Person{
-		Name:        name,
-		ActionTaken: actionTaken,
-		TaskID:      id,
+		Name: name,
 	}
 	db.Create(&person)
 }

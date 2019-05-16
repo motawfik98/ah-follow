@@ -6,9 +6,9 @@ import (
 
 type Task struct {
 	gorm.Model
-	Description string   `gorm:"not null" form:"description" json:"description"`
-	FollowedBy  string   `form:"followed_by" json:"followed_by"`
-	People      []Person `json:"people"`
+	Description string        `gorm:"not null" form:"description" json:"description"`
+	FollowedBy  string        `form:"followed_by" json:"followed_by"`
+	People      []*PersonTask `gorm:"PRELOAD:false" json:"people"`
 	Hash        string
 }
 

@@ -26,8 +26,7 @@ func (db *MyDB) showLoginPage(c echo.Context) error {
 func (db *MyDB) performLogin(c echo.Context) error {
 	var loginData, user models.User
 	_ = c.Bind(&loginData)
-	db.GormDB.Where("username = ?",
-		loginData.Username).First(&user)
+	db.GormDB.First(&user, "username = ?", loginData.Username)
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
 	if user.ID == 0 || err != nil {
 		sess := getSession("flash", &c)

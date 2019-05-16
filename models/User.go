@@ -6,9 +6,12 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `gorm:"not null" form:"username"`
-	Password string `gorm:"not null" form:"password"`
+	Username string `form:"username"`
+	Password string `form:"password"`
 	Hash     string
+	Name     string `json:"name"`
+	Admin    bool
+	Tasks    []*PersonTask `gorm:"PRELOAD:false"`
 }
 
 func (user *User) AfterCreate(scope *gorm.Scope) error {
