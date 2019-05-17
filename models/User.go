@@ -11,7 +11,7 @@ type User struct {
 	Hash     string
 	Name     string `json:"name"`
 	Admin    bool
-	Tasks    []*PersonTask `gorm:"PRELOAD:false"`
+	Tasks    []*UserTask `gorm:"PRELOAD:false"`
 }
 
 func (user *User) AfterCreate(scope *gorm.Scope) error {

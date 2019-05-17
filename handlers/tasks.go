@@ -15,25 +15,23 @@ type datatableTask struct {
 func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("data[description]"),
-		FollowedBy:  c.FormValue("data[followed_by]"),
-		People:      []*models.PersonTask{},
 	}
 	db.GormDB.Create(&taskToSave)
 
-	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
-	//db.GormDB.Preload("People")
-	for i := 0; i < totalPeople; i++ {
-		id := c.FormValue("data[" + strconv.Itoa(i) + "]")
+	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
+	for i := 0; i < totalUsers; i++ {
+		id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
 		uid, _ := strconv.ParseUint(id, 10, 64)
-		personTask := models.PersonTask{
-			TaskID: taskToSave.ID,
-			Task:   &taskToSave,
-			UserID: uint(uid),
-		}
-		db.GormDB.Create(&personTask)
+		models.CreateUserTask(db.GormDB, taskToSave.ID, uint(uid))
 	}
 
-	db.GormDB.Preload("People").Find(&taskToSave, taskToSave.ID)
+	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
+	for i := 0; i < totalPeople; i++ {
+		models.CreatePerson(db.GormDB, c.FormValue("data[people_name_"+strconv.Itoa(i)+"]"),
+			c.FormValue("data[people_action_"+strconv.Itoa(i)+"]"), taskToSave.ID)
+	}
+
+	db.GormDB.Preload("Users").Preload("People").Find(&taskToSave, taskToSave.ID)
 
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = taskToSave
@@ -42,7 +40,7 @@ func (db *MyDB) AddTask(c echo.Context) error {
 }
 
 func (db *MyDB) EditTask(c echo.Context) error {
-	id, err := strconv.Atoi(c.FormValue("id"))
+	taskID, err := strconv.Atoi(c.FormValue("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"message": "Invalid Request",
@@ -50,27 +48,53 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	}
 	updatedValues := models.Task{
 		Description: c.FormValue("data[description]"),
-		FollowedBy:  c.FormValue("data[followed_by]"),
 	}
 	var task models.Task
-	db.GormDB.First(&task, id)
+	db.GormDB.First(&task, taskID)
 	db.GormDB.Model(&task).Updates(updatedValues)
 
-	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
+	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
+	var ids []int
+	for i := 0; i < totalUsers; i++ {
+		var userTask models.UserTask
 
-	for i := 1; i <= totalPeople; i++ {
-		var person models.Person
-		name := "data[name_" + strconv.Itoa(i) + "_repeat]"
-		action := "data[action_" + strconv.Itoa(i) + "_repeat]"
-		db.GormDB.Where("name = ? AND task_id = ?",
-			c.FormValue(name), id).Find(&person)
-		if person.ID == 0 {
-			models.CreatePerson(db.GormDB, c.FormValue(name), c.FormValue(action), id)
-		} else {
-
-			db.GormDB.Save(&person)
+		id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
+		uid, _ := strconv.ParseUint(id, 10, 64)
+		ids = append(ids, int(uid))
+		db.GormDB.Where("task_id = ? AND user_id = ?", taskID, uid).Find(&userTask)
+		if userTask.TaskID == 0 && userTask.UserID == 0 {
+			models.CreateUserTask(db.GormDB, uint(taskID), uint(uid))
 		}
 	}
+	if ids == nil {
+		ids = []int{0}
+	}
+	db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
+
+	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
+	var peopleIDs []int
+	for i := 0; i < totalPeople; i++ {
+		var person models.Person
+		name := c.FormValue("data[people_name_" + strconv.Itoa(i) + "]")
+		action := c.FormValue("data[people_action_" + strconv.Itoa(i) + "]")
+		if name == "" {
+			continue
+		}
+		db.GormDB.Where("name = ? AND task_id = ?", name, taskID).Find(&person)
+		var personID int
+		if person.ID == 0 {
+			personID = models.CreatePerson(db.GormDB, name, action, uint(taskID))
+		} else {
+			person.ActionTaken = action
+			db.GormDB.Save(&person)
+			personID, _ = strconv.Atoi(c.FormValue("data[people_id_" + strconv.Itoa(i) + "]"))
+		}
+		peopleIDs = append(peopleIDs, personID)
+	}
+	if peopleIDs == nil {
+		peopleIDs = []int{0}
+	}
+	db.GormDB.Delete(models.Person{}, "task_id = ? AND id NOT IN (?)", taskID, peopleIDs)
 
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = task

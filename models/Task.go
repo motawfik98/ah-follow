@@ -6,9 +6,9 @@ import (
 
 type Task struct {
 	gorm.Model
-	Description string        `gorm:"not null" form:"description" json:"description"`
-	FollowedBy  string        `form:"followed_by" json:"followed_by"`
-	People      []*PersonTask `gorm:"PRELOAD:false" json:"people"`
+	Description string      `gorm:"not null" form:"description" json:"description"`
+	Users       []*UserTask `gorm:"PRELOAD:false" json:"users"`
+	People      []Person    `gorm:"PRELOAD:false" json:"people"`
 	Hash        string
 }
 
@@ -20,15 +20,15 @@ func (task *Task) AfterCreate(scope *gorm.Scope) error {
 }
 
 func (task *Task) DeleteChildren(db *gorm.DB) {
-	for i := 0; i < len(task.People); i++ {
-		db.Delete(task.People[i])
+	for i := 0; i < len(task.Users); i++ {
+		db.Delete(task.Users[i])
 	}
 }
 
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string,
 	descriptionSearch string, followedBySearch string, minDateSearch string, maxDateSearch string) ([]Task, int, int) {
 	var tasks []Task
-	db = db.Preload("People")
+	db = db.Preload("Users").Preload("People")
 	if descriptionSearch != "" {
 		descriptionSearch = "%" + descriptionSearch + "%"
 		db = db.Where("description LIKE ?", descriptionSearch)

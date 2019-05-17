@@ -44,7 +44,16 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
             var btnPlus = obj.siblings("#btnPlus");
 
             if (!options.styleOverride) {
-
+                btnPlus.css({
+                    'float': 'right',
+                    'border': '0px',
+                    'background-image': 'url("img/add.png")',
+                    'background-position': 'center center',
+                    'background-repeat': 'no-repeat',
+                    'height': '25px',
+                    'width': '25px',
+                    'cursor': 'pointer',
+                });
             }
 
             if (recordset.length) {
@@ -103,7 +112,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
 
             function resetNumbering() {
                 $(obj).children(".recordset").each(function (index, element) {
-                    $(element).find('input:text, input:password, input:file, select, textarea').each(function () {
+                    $(element).find('input:text, input:password, input:hidden, input:file, select, textarea').each(function () {
                         old_name = this.name;
                         new_name = old_name.replace(/\_([0-9]\d{0})\_/g, "_" + (index + 1) + "_");
                         this.id = this.name = new_name;
@@ -119,7 +128,16 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                 $(recordset).children().first().before(divMinus);
                 var btnMinus = $(recordset).children("#btnMinus");
                 if (!options.styleOverride) {
-
+                    btnMinus.css({
+                        'float': 'right',
+                        'border': '0px',
+                        'background-image': 'url("img/remove.png")',
+                        'background-position': 'center center',
+                        'background-repeat': 'no-repeat',
+                        'height': '25px',
+                        'width': '25px',
+                        'cursor': 'poitnter',
+                    });
                 }
             }
 

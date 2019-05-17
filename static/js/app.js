@@ -17,7 +17,6 @@ let cols = [
             return '';
         }
     }, {data: "description", name: "description"},
-    {data: "followed_by", name: "followed_by"},
     {
         data: "CreatedAt",
         render: function (data, type, row, meta) {
@@ -71,9 +70,6 @@ $(document).ready(function () {
             label: "التكليف:",
             name: "description",
             type: "textarea"
-        }, {
-            label: "المتابع:",
-            name: "followed_by"
         }],
         i18n: {
             create: {
@@ -103,7 +99,7 @@ $(document).ready(function () {
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
-        order: [[4, 'desc']],
+        order: [[cols.length - 1, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
@@ -126,41 +122,47 @@ $(document).ready(function () {
         },     // enable single row selection
         buttons: [
             {extend: "create", editor: editor},
-            {extend: "edit", editor: editor},
+            {extend: "edit", editor: editor, name: "editButton"},
             {extend: "remove", editor: editor}
         ]
     });
 
     search();
-    sendExtraFormData();
+    sendExtraFormDataAndValidate();
     showHideChild();
     showPeopleActions();
 
     $('#baseTable tbody').on('dblclick', 'tr', function () {
-        console.log(myTable.buttons());
-        editor.edit(this);
+        myTable.rows('.selected').deselect();
+        $(this).toggleClass('selected');
+        myTable.rows('.selected').edit();
+        $(this).toggleClass('selected');
     });
 });
 
 
 function showPeopleActions() {
     editor.on('open', function (e, type) {
-        let $selectedPeople = $('#selectedPeople');
-        $selectedPeople.val(null).trigger('change');
+        let $selectedUsers = $('#selectedUsers');
+        $selectedUsers.val(null).trigger('change');
         $('#czContainer').empty();
         const selectedPeopleIDs = [];
         const modifier = editor.modifier();
         if (modifier) {
             const data = myTable.row(modifier).data();
+            for (let i = 1; i <= data.users.length; i++) {
+                selectedPeopleIDs.push(data.users[i - 1].user.ID);
+            }
+            $selectedUsers.val(selectedPeopleIDs);
+            $selectedUsers.trigger('change'); // Notify any JS components that the value changed
+
             for (let i = 1; i <= data.people.length; i++) {
                 $('#btnPlus').trigger('click');
                 $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
-                selectedPeopleIDs.push(data.people[i - 1].user.ID);
-                $('#name_' + i + '_repeat').val(data.people[i - 1].user.name);
+                $('#name_' + i + '_repeat').val(data.people[i - 1].name);
                 $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
             }
-            $selectedPeople.val(selectedPeopleIDs);
-            $selectedPeople.trigger('change'); // Notify any JS components that the value changed
+
         }
     });
 }
@@ -172,16 +174,35 @@ function search() {
     });
 }
 
-function sendExtraFormData() {
+function sendExtraFormDataAndValidate() {
     editor.on('preSubmit', function (e, data, action) {
         if (action === 'remove')
             return;
 
-        let selectedPeople = $('#selectedPeople').val();
-        const numberOfExtraFields = selectedPeople.length;
-        data.data['totalPeople'] = numberOfExtraFields;
-        for (let i = 0; i < numberOfExtraFields; i += 1) {
-            data.data[i] = selectedPeople[i];
+        const description = this.field('description');
+
+        if (description.val().length === 0) {
+            description.error('يجب ان يوجد تكليف')
+        }
+
+        if (this.inError()) {
+            return false;
+        }
+
+
+        let selectedUsers = $('#selectedUsers').val();
+        const numberOfExtraUsers = selectedUsers.length;
+        data.data['totalUsers'] = numberOfExtraUsers;
+        for (let i = 0; i < numberOfExtraUsers; i++) {
+            data.data["users_" + i] = selectedUsers[i];
+        }
+
+        let numberOfPeople = $('#czContainer_czMore_txtCount').val();
+        data.data['totalPeople'] = numberOfPeople;
+        for (let i = 0; i < numberOfPeople; i++) {
+            data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();
+            data.data["people_name_" + i] = $('#name_' + (i + 1) + '_repeat').val();
+            data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
         }
     })
 }
@@ -228,7 +249,7 @@ function format(d) {
     innerTable += '</tr></head><tbody>';
     for (var i = 0; i < d.people.length; i++) {
         innerTable += '<tr>';
-        innerTable += ('<td>' + d.people[i].user.name + '</td>');
+        innerTable += ('<td>' + d.people[i].name + '</td>');
         innerTable += ('<td>' + d.people[i].action_taken + '</td>');
         innerTable += '</tr>';
     }

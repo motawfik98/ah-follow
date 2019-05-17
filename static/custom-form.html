@@ -4,17 +4,19 @@
 
         <editor-field name="description"></editor-field>
 
-        <editor-field name="followed_by"></editor-field>
 
         <fieldset class="border p-2">
-            <legend>القائم به</legend>
-            <select class="form-control js-select2" multiple="multiple" id="selectedPeople">
+            <legend>المتابع</legend>
+            <select class="form-control js-select2" multiple="multiple" id="selectedUsers">
                 <option></option>
                 {{range .users}}
                     <option value="{{.ID}}">{{.Name}}</option>
                 {{end}}
             </select>
+        </fieldset>
 
+        <fieldset class="border p-2">
+            <legend>القائم به</legend>
             <div id="czContainer">
                 <div id="first">
                     <div class="recordset">
@@ -22,17 +24,18 @@
                             <div class="col">
                                 <input type="hidden" name="id_1_repeat" id="id_1_repeat">
                                 <input type="text" name="name_1_repeat" class="form-control" id="name_1_repeat"
-                                       placeholder="الاسم" disabled>
+                                       placeholder="الاسم">
                             </div>
                             <div class="col">
                                 <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"
-                                       placeholder="الموقف" disabled>
+                                       placeholder="الموقف">
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </fieldset>
+
 
     </div>
 
