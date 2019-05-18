@@ -131,7 +131,7 @@ $(document).ready(function () {
             data: function (d) {
                 return $.extend({}, d, {
                     "description": $("#description").val(),
-                    "followed_by": $("#followed_by").val(),
+                    "sent_to": $("#sent_to").val(),
                     "min_date": $("#min").val(),
                     "max_date": $("#max").val(),
                     "retrieve": $("input[name*='retrieveValues']:checked").val()

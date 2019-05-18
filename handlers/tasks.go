@@ -150,14 +150,15 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber)
 	sortedColumnName := q[sprintf][0]
 	descriptionSearch := q["description"][0]
-	followedBySearch := q["followed_by"][0]
+	sentToSearch := q["sent_to"][0]
 	minDateSearch := q["min_date"][0]
 	maxDateSearch := q["max_date"][0]
 	retrieveType := q["retrieve"][0]
 	sess := getSession("authorization", &c)
 	admin := sess.Values["isAdmin"].(bool)
+	userID := sess.Values["user_id"].(uint)
 	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter := models.GetAllTasks(db.GormDB, start, length,
-		sortedColumnName, direction, descriptionSearch, followedBySearch, minDateSearch, maxDateSearch, retrieveType, admin)
+		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, admin, userID)
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,

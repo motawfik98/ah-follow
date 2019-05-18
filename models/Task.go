@@ -28,10 +28,11 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 }
 
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
-	descriptionSearch, followedBySearch, minDateSearch, maxDateSearch, retrieveType string, admin bool) ([]Task, int, int) {
+	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string, admin bool, userID uint) ([]Task, int, int) {
 	var tasks []Task
 	if !admin {
-		db = db.Table("tasks").Joins("LEFT JOIN user_tasks ON user_tasks.task_id = tasks.id")
+		db = db.Table("tasks").Joins("JOIN user_tasks ON user_tasks.task_id = tasks.id")
+		db = db.Where("user_tasks.user_id = ?", userID)
 	}
 	if retrieveType == "replied" {
 		db = db.Where("final_action IS NOT NULL")
@@ -55,9 +56,10 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		descriptionSearch = "%" + descriptionSearch + "%"
 		db = db.Where("description LIKE ?", descriptionSearch)
 	}
-	if followedBySearch != "" {
-		followedBySearch = "%" + followedBySearch + "%"
-		db = db.Where("followed_by LIKE ?", followedBySearch)
+	if sentToSearch != "" {
+		sentToSearch = "%" + sentToSearch + "%"
+		db = db.Table("tasks").Joins("JOIN people ON tasks.id = people.task_id")
+		db = db.Where("people.name LIKE ?", sentToSearch)
 	}
 	if minDateSearch != "" {
 		minDateSearch = minDateSearch + " 00:00:00.0000000 +02:00"
