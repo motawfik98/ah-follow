@@ -16,6 +16,7 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.POST("/tasks/edit", db.EditTask)
 	e.POST("/tasks/remove", db.RemoveTask)
 	e.POST("/tasks/removeChild", db.RemoveChild)
-	e.POST("/tasks/seen", db.ChangeSeen)
+	e.POST("/tasks/person/seen", db.ChangePersonSeen)
+	e.POST("/tasks/seen", db.ChangeTaskSeen)
 	e.GET("/getData", db.GetTasks)
 }

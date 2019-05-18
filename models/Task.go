@@ -9,7 +9,8 @@ type Task struct {
 	Description string      `gorm:"not null" form:"description" json:"description"`
 	Users       []*UserTask `gorm:"PRELOAD:false" json:"users"`
 	People      []Person    `gorm:"PRELOAD:false" json:"people"`
-	FinalAction string      `json:"final_action"`
+	FinalAction string      `json:"final_action" gorm:"default: null"`
+	Seen        bool        `gorm:"default:1;not null" json:"seen"`
 	Hash        string
 }
 
@@ -26,9 +27,29 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 	}
 }
 
-func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn string, direction string,
-	descriptionSearch string, followedBySearch string, minDateSearch string, maxDateSearch string) ([]Task, int, int) {
+func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
+	descriptionSearch, followedBySearch, minDateSearch, maxDateSearch, retrieveType string, admin bool) ([]Task, int, int) {
 	var tasks []Task
+	if !admin {
+		db = db.Table("tasks").Joins("LEFT JOIN user_tasks ON user_tasks.task_id = tasks.id")
+	}
+	if retrieveType == "replied" {
+		db = db.Where("final_action IS NOT NULL")
+	} else if retrieveType == "nonReplied" {
+		db = db.Where("final_action IS NULL")
+	} else if retrieveType == "unseen" {
+		if admin {
+			db = db.Where("seen = 0")
+		} else {
+			db = db.Where("user_tasks.seen = 0")
+		}
+	} else if retrieveType == "seen" {
+		if admin {
+			db = db.Where("seen = 1")
+		} else {
+			db = db.Where("user_tasks.seen = 1")
+		}
+	}
 	db = db.Preload("Users").Preload("People")
 	if descriptionSearch != "" {
 		descriptionSearch = "%" + descriptionSearch + "%"

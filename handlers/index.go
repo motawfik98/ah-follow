@@ -14,7 +14,7 @@ func (db *MyDB) index(c echo.Context) error {
 	var users []models.User
 	db.GormDB.Preload("Tasks").Find(&users)
 	return c.Render(http.StatusOK, "index.html", echo.Map{
-		"title":   "الرأيسيه",
+		"title":   "الرئيسية",
 		"status":  status,
 		"message": message,
 		"users":   users,

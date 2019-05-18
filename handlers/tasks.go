@@ -52,7 +52,9 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	var task models.Task
 	db.GormDB.First(&task, taskID)
 	db.GormDB.Model(&task).UpdateColumn("description", description)
-	db.GormDB.Model(&task).UpdateColumn("final_action", finalAction)
+	if finalAction != task.FinalAction {
+		db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
+	}
 
 	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
 	var ids []int
@@ -123,11 +125,18 @@ func (db *MyDB) RemoveChild(c echo.Context) error {
 	return nil
 }
 
-func (db *MyDB) ChangeSeen(c echo.Context) error {
+func (db *MyDB) ChangePersonSeen(c echo.Context) error {
 	seen := c.FormValue("seen")
 	taskID := c.FormValue("task_id")
 	userID := c.FormValue("user_id")
 	db.GormDB.Model(models.UserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).Update("seen", seen)
+	return nil
+}
+
+func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
+	seen := c.FormValue("seen")
+	taskID := c.FormValue("task_id")
+	db.GormDB.Model(models.Task{}).Where("id = ?", taskID).Update("seen", seen)
 	return nil
 }
 
@@ -144,8 +153,11 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	followedBySearch := q["followed_by"][0]
 	minDateSearch := q["min_date"][0]
 	maxDateSearch := q["max_date"][0]
+	retrieveType := q["retrieve"][0]
+	sess := getSession("authorization", &c)
+	admin := sess.Values["isAdmin"].(bool)
 	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter := models.GetAllTasks(db.GormDB, start, length,
-		sortedColumnName, direction, descriptionSearch, followedBySearch, minDateSearch, maxDateSearch)
+		sortedColumnName, direction, descriptionSearch, followedBySearch, minDateSearch, maxDateSearch, retrieveType, admin)
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,

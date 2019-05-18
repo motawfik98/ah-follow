@@ -110,6 +110,9 @@ $(document).ready(function () {
     myTable = $('#baseTable').DataTable({
         initComplete: configureTableForNonAdmins,
         createdRow: function (row, data, dataIndex) {
+            if (isAdmin && !data.seen) {
+                $(row).children().first().addClass('unseen');
+            }
             for (let i = 0; i < data.users.length; i++) {
                 if (data.users[i].user_id === userID && !data.users[i].seen) {
                     $(row).children().first().addClass('unseen');
@@ -130,7 +133,8 @@ $(document).ready(function () {
                     "description": $("#description").val(),
                     "followed_by": $("#followed_by").val(),
                     "min_date": $("#min").val(),
-                    "max_date": $("#max").val()
+                    "max_date": $("#max").val(),
+                    "retrieve": $("input[name*='retrieveValues']:checked").val()
                 });
             }
         },
@@ -179,29 +183,25 @@ function openModalOnDoubleClick() {
 
 function showPeopleActions() {
     editor.on('open', function (e, type) {
-        if (!isAdmin) {
-            $('#selectedUsers').attr('disabled', true);
-            let modifier = editor.modifier();
+        const modifier = editor.modifier();
+        let $selectedUsers = $('#selectedUsers');
+        if (isAdmin) {
             if (modifier) {
-                var data = myTable.row(modifier).data();
+                markTaskAsSeen(modifier);
+            }
+        } else {
+            $selectedUsers.attr('disabled', true);
+            if (modifier) {
+                const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.users.length; i++) {
-                    if (data.users[i].user_id === userID && !data.users[i].seen) {
-                        $.post("/tasks/seen", {
-                            seen: true,
-                            task_id: data.users[i].task_id,
-                            user_id: data.users[i].user_id
-                        });
-                        $('tr#' + data.ID).removeClass('unseen')
-                    }
+                    markPersonTaskAsSeen(data, i);
                 }
             }
         }
 
-        let $selectedUsers = $('#selectedUsers');
         $selectedUsers.val(null).trigger('change');
         $('#czContainer').empty();
         const selectedPeopleIDs = [];
-        const modifier = editor.modifier();
         if (modifier) {
             const data = myTable.row(modifier).data();
             for (let i = 1; i <= data.users.length; i++) {
@@ -211,14 +211,40 @@ function showPeopleActions() {
             $selectedUsers.trigger('change'); // Notify any JS components that the value changed
 
             for (let i = 1; i <= data.people.length; i++) {
-                $('#btnPlus').trigger('click');
-                $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
-                $('#name_' + i + '_repeat').val(data.people[i - 1].name);
-                $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
+                addPersonAndHisActionToModal(i, data);
             }
 
         }
     });
+}
+
+function addPersonAndHisActionToModal(i, data) {
+    $('#btnPlus').trigger('click');
+    $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
+    $('#name_' + i + '_repeat').val(data.people[i - 1].name);
+    $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
+}
+
+function markTaskAsSeen(modifier) {
+    const data = myTable.row(modifier).data();
+    if (!data.seen) {
+        $.post("/tasks/seen", {
+            seen: true,
+            task_id: data.ID
+        });
+        $('tr#' + data.ID).removeClass('unseen')
+    }
+}
+
+function markPersonTaskAsSeen(data, i) {
+    if (data.users[i].user_id === userID && !data.users[i].seen) {
+        $.post("/tasks/person/seen", {
+            seen: true,
+            task_id: data.ID,
+            user_id: data.users[i].user_id
+        });
+        $('tr#' + data.ID).removeClass('unseen')
+    }
 }
 
 
