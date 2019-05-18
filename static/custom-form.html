@@ -1,8 +1,15 @@
 {{define "custom-form"}}
 
+    <script>
+        let isAdmin = {{.admin}};
+        let userID = {{.userID}}
+    </script>
+
     <div id="customForm">
 
         <editor-field name="description"></editor-field>
+
+        <editor-field name="final_action"></editor-field>
 
 
         <fieldset class="border p-2">

@@ -69,7 +69,19 @@ $(document).ready(function () {
         fields: [{
             label: "التكليف:",
             name: "description",
-            type: "textarea"
+            type: "textarea",
+            attr: {
+                disabled: !isAdmin,
+                readonly: !isAdmin
+            }
+        }, {
+            label: "الاجراء النهائي:",
+            name: "final_action",
+            type: "textarea",
+            attr: {
+                disabled: isAdmin,
+                readonly: isAdmin
+            }
         }],
         i18n: {
             create: {
@@ -96,6 +108,14 @@ $(document).ready(function () {
 
 
     myTable = $('#baseTable').DataTable({
+        initComplete: configureTableForNonAdmins,
+        createdRow: function (row, data, dataIndex) {
+            for (let i = 0; i < data.users.length; i++) {
+                if (data.users[i].user_id === userID && !data.users[i].seen) {
+                    $(row).children().first().addClass('unseen');
+                }
+            }
+        },
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
@@ -121,9 +141,9 @@ $(document).ready(function () {
             selector: 'td:first-child'
         },     // enable single row selection
         buttons: [
-            {extend: "create", editor: editor},
+            {extend: "create", editor: editor, name: "createButton"},
             {extend: "edit", editor: editor, name: "editButton"},
-            {extend: "remove", editor: editor}
+            {extend: "remove", editor: editor, name: "removeButton"}
         ]
     });
 
@@ -131,18 +151,52 @@ $(document).ready(function () {
     sendExtraFormDataAndValidate();
     showHideChild();
     showPeopleActions();
+    openModalOnDoubleClick();
+    redrawTableOnModalClose();
+});
 
+function redrawTableOnModalClose() {
+    editor.on('close', function () {
+        myTable.draw();
+    });
+}
+
+
+function configureTableForNonAdmins() {
+    if (!isAdmin) {
+        myTable.buttons('createButton:name, removeButton:name').remove();
+    }
+}
+
+function openModalOnDoubleClick() {
     $('#baseTable tbody').on('dblclick', 'tr', function () {
         myTable.rows('.selected').deselect();
         $(this).toggleClass('selected');
         myTable.rows('.selected').edit();
         $(this).toggleClass('selected');
     });
-});
-
+}
 
 function showPeopleActions() {
     editor.on('open', function (e, type) {
+        if (!isAdmin) {
+            $('#selectedUsers').attr('disabled', true);
+            let modifier = editor.modifier();
+            if (modifier) {
+                var data = myTable.row(modifier).data();
+                for (let i = 0; i < data.users.length; i++) {
+                    if (data.users[i].user_id === userID && !data.users[i].seen) {
+                        $.post("/tasks/seen", {
+                            seen: true,
+                            task_id: data.users[i].task_id,
+                            user_id: data.users[i].user_id
+                        });
+                        $('tr#' + data.ID).removeClass('unseen')
+                    }
+                }
+            }
+        }
+
         let $selectedUsers = $('#selectedUsers');
         $selectedUsers.val(null).trigger('change');
         $('#czContainer').empty();

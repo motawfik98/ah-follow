@@ -46,6 +46,13 @@ func (db *MyDB) performLogin(c echo.Context) error {
 func addSession(context *echo.Context, id uint) error {
 	sess := getSession("authorization", context)
 	sess.Values["user_id"] = id
+	var admin bool
+	if id == 1 {
+		admin = true
+	} else {
+		admin = false
+	}
+	sess.Values["isAdmin"] = admin
 	return sess.Save((*context).Request(), (*context).Response())
 }
 

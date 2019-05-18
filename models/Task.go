@@ -9,6 +9,7 @@ type Task struct {
 	Description string      `gorm:"not null" form:"description" json:"description"`
 	Users       []*UserTask `gorm:"PRELOAD:false" json:"users"`
 	People      []Person    `gorm:"PRELOAD:false" json:"people"`
+	FinalAction string      `json:"final_action"`
 	Hash        string
 }
 

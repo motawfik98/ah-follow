@@ -46,12 +46,13 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			"message": "Invalid Request",
 		})
 	}
-	updatedValues := models.Task{
-		Description: c.FormValue("data[description]"),
-	}
+	description := c.FormValue("data[description]")
+	finalAction := c.FormValue("data[final_action]")
+
 	var task models.Task
 	db.GormDB.First(&task, taskID)
-	db.GormDB.Model(&task).Updates(updatedValues)
+	db.GormDB.Model(&task).UpdateColumn("description", description)
+	db.GormDB.Model(&task).UpdateColumn("final_action", finalAction)
 
 	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
 	var ids []int
@@ -119,6 +120,14 @@ func (db *MyDB) RemoveTask(c echo.Context) error {
 func (db *MyDB) RemoveChild(c echo.Context) error {
 	personId, _ := strconv.Atoi(c.FormValue("id"))
 	db.GormDB.Delete(models.Person{}, "id = ?", personId)
+	return nil
+}
+
+func (db *MyDB) ChangeSeen(c echo.Context) error {
+	seen := c.FormValue("seen")
+	taskID := c.FormValue("task_id")
+	userID := c.FormValue("user_id")
+	db.GormDB.Model(models.UserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).Update("seen", seen)
 	return nil
 }
 
