@@ -12,11 +12,13 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.GET("/logout", logout, ensureLoggedIn)
 	e.GET("/", db.index, ensureLoggedIn)
 
-	e.POST("/tasks/add", db.AddTask)
-	e.POST("/tasks/edit", db.EditTask)
-	e.POST("/tasks/remove", db.RemoveTask)
-	e.POST("/tasks/removeChild", db.RemoveChild)
-	e.POST("/tasks/person/seen", db.ChangePersonSeen)
-	e.POST("/tasks/seen", db.ChangeTaskSeen)
-	e.GET("/getData", db.GetTasks)
+	tasks := e.Group("/tasks", ensureLoggedIn)
+
+	tasks.POST("/add", db.AddTask, ensureAdmin)
+	tasks.POST("/remove", db.RemoveTask, ensureAdmin)
+	tasks.POST("/seen", db.ChangeTaskSeen, ensureAdmin)
+
+	tasks.POST("/edit", db.EditTask)
+	tasks.POST("/person/seen", db.ChangePersonSeen)
+	tasks.GET("/getData", db.GetTasks)
 }

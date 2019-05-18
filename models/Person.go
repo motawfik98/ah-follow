@@ -4,10 +4,11 @@ import "github.com/jinzhu/gorm"
 
 type Person struct {
 	gorm.Model
-	Name        string `json:"name"`
-	ActionTaken string `json:"action_taken"`
-	Hash        string
-	TaskID      uint
+	Name          string `json:"name"`
+	ActionTaken   string `json:"action_taken"`
+	FinalResponse bool   `json:"final_response" gorm:"default:0"`
+	Hash          string
+	TaskID        uint
 }
 
 func (person *Person) AfterCreate(scope *gorm.Scope) error {

@@ -35,6 +35,20 @@ func ensureLoggedIn(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func ensureAdmin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		_, isAdmin := getUserStatus(&c)
+		if isAdmin == true {
+			return next(c)
+		}
+		sess := getSession("flash", &c)
+		sess.AddFlash("failure", "status")
+		sess.AddFlash("عفوا, ليس لديك الصلاحيه لأتمام العمليه", "message")
+		_ = sess.Save(c.Request(), c.Response())
+		return c.Redirect(http.StatusFound, "/")
+	}
+}
+
 func getSession(sessionName string, c *echo.Context) *sessions.Session {
 	sess, _ := session.Get(sessionName, *c)
 	sess.Options = &sessions.Options{
@@ -43,6 +57,11 @@ func getSession(sessionName string, c *echo.Context) *sessions.Session {
 		HttpOnly: true,
 	}
 	return sess
+}
+
+func getUserStatus(c *echo.Context) (uint, bool) {
+	sess := getSession("authorization", c)
+	return sess.Values["user_id"].(uint), sess.Values["isAdmin"].(bool)
 }
 
 func deleteSession(sess *sessions.Session, c echo.Context) {

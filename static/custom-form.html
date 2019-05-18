@@ -23,12 +23,12 @@
         </fieldset>
 
         <fieldset class="border p-2">
-            <legend>القائم به</legend>
+            <legend>اسم القائم به وموقفه</legend>
             <div id="czContainer">
                 <div id="first">
                     <div class="recordset">
                         <div class="form-row m-3">
-                            <div class="col">
+                            <div class="col-4">
                                 <input type="hidden" name="id_1_repeat" id="id_1_repeat">
                                 <input type="text" name="name_1_repeat" class="form-control" id="name_1_repeat"
                                        placeholder="الاسم">
@@ -36,6 +36,10 @@
                             <div class="col">
                                 <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"
                                        placeholder="الموقف">
+                            </div>
+                            <div class="col-1 form-check pl-3">
+                                <input type="checkbox" class="form-check-input" id="finalResponse_1_repeat">
+                                <label class="form-check-label" for="finalResponse_1_repeat">تم الرد نهائيا</label>
                             </div>
                         </div>
                     </div>

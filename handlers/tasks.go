@@ -40,6 +40,7 @@ func (db *MyDB) AddTask(c echo.Context) error {
 }
 
 func (db *MyDB) EditTask(c echo.Context) error {
+	_, isAdmin := getUserStatus(&c)
 	taskID, err := strconv.Atoi(c.FormValue("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -51,28 +52,32 @@ func (db *MyDB) EditTask(c echo.Context) error {
 
 	var task models.Task
 	db.GormDB.First(&task, taskID)
-	db.GormDB.Model(&task).UpdateColumn("description", description)
+	if isAdmin {
+		db.GormDB.Model(&task).UpdateColumn("description", description)
+	}
 	if finalAction != task.FinalAction {
 		db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 	}
 
-	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
-	var ids []int
-	for i := 0; i < totalUsers; i++ {
-		var userTask models.UserTask
+	if isAdmin {
+		totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
+		var ids []int
+		for i := 0; i < totalUsers; i++ {
+			var userTask models.UserTask
 
-		id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
-		uid, _ := strconv.ParseUint(id, 10, 64)
-		ids = append(ids, int(uid))
-		db.GormDB.Where("task_id = ? AND user_id = ?", taskID, uid).Find(&userTask)
-		if userTask.TaskID == 0 && userTask.UserID == 0 {
-			models.CreateUserTask(db.GormDB, uint(taskID), uint(uid))
+			id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
+			uid, _ := strconv.ParseUint(id, 10, 64)
+			ids = append(ids, int(uid))
+			db.GormDB.Where("task_id = ? AND user_id = ?", taskID, uid).Find(&userTask)
+			if userTask.TaskID == 0 && userTask.UserID == 0 {
+				models.CreateUserTask(db.GormDB, uint(taskID), uint(uid))
+			}
 		}
+		if ids == nil {
+			ids = []int{0}
+		}
+		db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
 	}
-	if ids == nil {
-		ids = []int{0}
-	}
-	db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
 	var peopleIDs []int
@@ -80,6 +85,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		var person models.Person
 		name := c.FormValue("data[people_name_" + strconv.Itoa(i) + "]")
 		action := c.FormValue("data[people_action_" + strconv.Itoa(i) + "]")
+		finalResponse, _ := strconv.ParseBool(c.FormValue("data[people_finalResponse_" + strconv.Itoa(i) + "]"))
 		if name == "" {
 			continue
 		}
@@ -89,6 +95,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			personID = models.CreatePerson(db.GormDB, name, action, uint(taskID))
 		} else {
 			person.ActionTaken = action
+			person.FinalResponse = finalResponse
 			db.GormDB.Save(&person)
 			personID, _ = strconv.Atoi(c.FormValue("data[people_id_" + strconv.Itoa(i) + "]"))
 		}
@@ -97,7 +104,9 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	if peopleIDs == nil {
 		peopleIDs = []int{0}
 	}
-	db.GormDB.Delete(models.Person{}, "task_id = ? AND id NOT IN (?)", taskID, peopleIDs)
+	if isAdmin {
+		db.GormDB.Delete(models.Person{}, "task_id = ? AND id NOT IN (?)", taskID, peopleIDs)
+	}
 
 	dataArray := make([]interface{}, 1)
 	dataArray[0] = task
@@ -117,12 +126,6 @@ func (db *MyDB) RemoveTask(c echo.Context) error {
 	task.DeleteChildren(db.GormDB)
 	db.GormDB.Delete(&task)
 	return c.JSON(http.StatusOK, models.Task{})
-}
-
-func (db *MyDB) RemoveChild(c echo.Context) error {
-	personId, _ := strconv.Atoi(c.FormValue("id"))
-	db.GormDB.Delete(models.Person{}, "id = ?", personId)
-	return nil
 }
 
 func (db *MyDB) ChangePersonSeen(c echo.Context) error {

@@ -127,17 +127,19 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                 var divMinus = '<div id="btnMinus" class="btnMinus" />';
                 $(recordset).children().first().before(divMinus);
                 var btnMinus = $(recordset).children("#btnMinus");
-                if (!options.styleOverride) {
-                    btnMinus.css({
-                        'float': 'right',
-                        'border': '0px',
-                        'background-image': 'url("img/remove.png")',
-                        'background-position': 'center center',
-                        'background-repeat': 'no-repeat',
-                        'height': '25px',
-                        'width': '25px',
-                        'cursor': 'poitnter',
-                    });
+                if (isAdmin) {
+                    if (!options.styleOverride) {
+                        btnMinus.css({
+                            'float': 'right',
+                            'border': '0px',
+                            'background-image': 'url("img/remove.png")',
+                            'background-position': 'center center',
+                            'background-repeat': 'no-repeat',
+                            'height': '25px',
+                            'width': '25px',
+                            'cursor': 'poitnter',
+                        });
+                    }
                 }
             }
 

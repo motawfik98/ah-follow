@@ -18,6 +18,18 @@ let cols = [
         }
     }, {data: "description", name: "description"},
     {
+        data: "people",
+        name: "totalResponses",
+        orderable: false,
+        render: function (data, type, row, meta) {
+            let finalResponses = 0;
+            for (let i = 0; i < data.length; i++)
+                if (data[i].final_response)
+                    finalResponses++;
+            return finalResponses + '/' + data.length;
+        }
+    },
+    {
         data: "CreatedAt",
         render: function (data, type, row, meta) {
             return data.substring(0, 10)
@@ -41,12 +53,7 @@ $(document).ready(function () {
         $('.search').trigger("change");
         return false;
     });
-    $("#czContainer").czMore({
-        onDelete: function (id) {
-            $.post('/tasks/removeChild', {id: id});
-            myTable.draw();
-        }
-    });
+    $("#czContainer").czMore();
 
 
     editor = new $.fn.dataTable.Editor({
@@ -127,7 +134,7 @@ $(document).ready(function () {
         processing: true,
         serverSide: true,
         ajax: {
-            url: "/getData",
+            url: "/tasks/getData",
             data: function (d) {
                 return $.extend({}, d, {
                     "description": $("#description").val(),
@@ -223,6 +230,7 @@ function addPersonAndHisActionToModal(i, data) {
     $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
     $('#name_' + i + '_repeat').val(data.people[i - 1].name);
     $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
+    $('#finalResponse_' + i + '_repeat').prop('checked', data.people[i - 1].final_response);
 }
 
 function markTaskAsSeen(modifier) {
@@ -283,6 +291,7 @@ function sendExtraFormDataAndValidate() {
             data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();
             data.data["people_name_" + i] = $('#name_' + (i + 1) + '_repeat').val();
             data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
+            data.data["people_finalResponse_" + i] = $('#finalResponse_' + (i + 1) + '_repeat').is(':checked');
         }
     })
 }
