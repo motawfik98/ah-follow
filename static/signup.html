@@ -7,11 +7,20 @@
             <div class="card">
                 <article class="card-body">
                     <h4 class="card-title mb-4 mt-1">مستخدم جديد</h4>
-                    <form action="/signup" method="post">
+                    <form action="{{.formAction}}" method="post">
                         <div class="form-group">
                             <label for="username">اسم المستخدم</label>
-                            <input type="text" name="username" class="form-control" id="username"
-                                   placeholder="اسم المستخدم">
+                            {{if .usernames}}
+                                <select class="form-control js-select2" id="username" name="username">
+                                    <option></option>
+                                    {{range .usernames}}
+                                        <option value="{{.}}">{{.}}</option>
+                                    {{end}}
+                                </select>
+                            {{else}}
+                                <input type="text" name="username" class="form-control" id="username"
+                                       placeholder="اسم المستخدم">
+                            {{end}}
                         </div>
                         <div class="form-row">
                             <div class="col">
@@ -34,7 +43,7 @@
                             </small>
 
                         </div>
-                        <button type="submit" class="btn btn-primary">تسجيل مستخدم جديد</button>
+                        <button type="submit" class="btn btn-primary">{{.buttonText}}</button>
                         <a href="/login">مسجل بالبرنامج ؟</a>
                     </form>
                 </article>

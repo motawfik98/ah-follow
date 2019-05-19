@@ -50,6 +50,8 @@ func showSignUpPage(c echo.Context) error {
 		"message":    message,
 		"title":      "مستخدم جديد",
 		"hideNavBar": true,
+		"buttonText": "تسجيل مستخدم جديد",
+		"formAction": "/signup",
 	})
 }
 
@@ -73,6 +75,46 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 	if len(databaseError) > 0 {
 		return redirectWithFlashMessage("failure", "تم تسجيل هذا المستخدم من قبل", "/signup", &c)
 	}
+	err := addSession(&c, user.ID, user.Admin)
+	if err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, "/")
+}
+
+func (db *MyDB) showResetPasswordUpPage(c echo.Context) error {
+	status, message := getFlashMessages(&c)
+	usernames := models.GetAllUsernames(db.GormDB)
+	return c.Render(http.StatusOK, "signup.html", echo.Map{
+		"status":     status,
+		"message":    message,
+		"title":      "تغيير كلمه السر",
+		"hideNavBar": true,
+		"usernames":  usernames,
+		"buttonText": "تغيير كلمه السر",
+		"formAction": "/reset-password",
+	})
+}
+
+func (db *MyDB) performResetPassword(c echo.Context) error {
+	username := c.FormValue("username")
+	password := c.FormValue("password")
+	passwordVerify := c.FormValue("passwordVerify")
+	adminPassword := c.FormValue("adminPassword")
+	if password != passwordVerify {
+		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", "/reset-password", &c)
+	}
+	var admin models.User
+	db.GormDB.First(&admin, 1)
+	administratorPassword := os.Getenv("administrator_password")
+	if !(adminPassword == administratorPassword || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil) {
+		return redirectWithFlashMessage("failure", "كلمه السر الخاصه ليست صحيحه", "/reset-password", &c)
+	}
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
+	user := models.User{}
+	db.GormDB.Where("username = ?", username).First(&user)
+	user.Password = string(hashedPassword)
+	db.GormDB.Save(&user)
 	err := addSession(&c, user.ID, user.Admin)
 	if err != nil {
 		return err

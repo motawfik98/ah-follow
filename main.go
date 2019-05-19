@@ -23,7 +23,7 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 }
 
 func main() {
-	_ = os.Setenv("administrator_password", "Nuccma6246V4")
+	_ = os.Setenv("administrator_password", "Nuccma6246V55")
 	db, _ := configurations.InitDB()
 
 	e := echo.New()
