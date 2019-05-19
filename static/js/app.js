@@ -248,10 +248,10 @@ function showPeopleActions() {
             $selectedUsers.val(selectedPeopleIDs);
             $selectedUsers.trigger('change'); // Notify any JS components that the value changed
 
-            for (let i = 1; i <= data.people.length; i++) {
+            let i;
+            for (i = 1; i <= data.people.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
-
         }
     });
 }
@@ -298,8 +298,7 @@ function sendExtraFormDataAndValidate() {
         if (action === 'remove')
             return;
 
-        const $invalidFeedback = $(".invalid-feedback");
-        $invalidFeedback.hide();
+        $(".invalid-feedback").hide();
 
         const description = this.field('description');
 
@@ -311,14 +310,15 @@ function sendExtraFormDataAndValidate() {
         let numberOfPeople = $('#czContainer_czMore_txtCount').val();
         for (let i = 0; i < numberOfPeople; i++) {
             if ($('#finalResponse_' + (i + 1) + '_repeat').is(':checked')) {
-                if ($('#action_' + (i + 1) + '_repeat').val() === "") {
+                let $actionTaken = $('#action_' + (i + 1) + '_repeat');
+                if ($actionTaken.val() === "") {
+                    $actionTaken.next().show();
                     editor.error("حدث خطأ, برجاء مراجعه البيانات");
                 }
             }
         }
 
         if (this.inError()) {
-            $invalidFeedback.show();
             return false;
         }
 
