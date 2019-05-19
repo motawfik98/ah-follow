@@ -9,7 +9,7 @@ type User struct {
 	Username string `form:"username"`
 	Password string `form:"password"`
 	Hash     string
-	Order    int `gorm:"AUTO_INCREMENT;type:int"`
+	Order    int
 	Admin    bool
 	Tasks    []*UserTask `gorm:"PRELOAD:false"`
 }
@@ -17,7 +17,7 @@ type User struct {
 func (user *User) AfterCreate(scope *gorm.Scope) error {
 	ID := int(user.ID)
 	hash := generateHash(ID)
-	scope.DB().Model(user).Update("Hash", hash)
+	scope.DB().Model(user).Updates(User{Hash: hash, Order: ID})
 	return nil
 }
 

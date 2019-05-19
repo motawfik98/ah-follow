@@ -33,7 +33,7 @@ func (db *MyDB) performLogin(c echo.Context) error {
 	if user.ID == 0 || err != nil {
 		sess := getSession("flash", &c)
 		sess.AddFlash("failure", "status")
-		sess.AddFlash("يانات الدخول ليست صحيحه", "message")
+		sess.AddFlash("بيانات الدخول ليست صحيحه", "message")
 		_ = sess.Save(c.Request(), c.Response())
 		return c.Redirect(http.StatusFound, "/login")
 	} else {
@@ -43,6 +43,37 @@ func (db *MyDB) performLogin(c echo.Context) error {
 		}
 		return c.Redirect(http.StatusFound, "/")
 	}
+}
+
+func showSignUpPage(c echo.Context) error {
+	status, message := getFlashMessages(&c)
+	return c.Render(http.StatusOK, "signup.html", echo.Map{
+		"status":     status,
+		"message":    message,
+		"title":      "مستخدم جديد",
+		"hideNavBar": true,
+	})
+}
+
+func (db *MyDB) performSignUp(c echo.Context) error {
+	username := c.FormValue("username")
+	password := c.FormValue("password")
+	adminPassword := c.FormValue("adminPassword")
+	if adminPassword != "Nuccma6246V4" {
+		sess := getSession("flash", &c)
+		sess.AddFlash("failure", "status")
+		sess.AddFlash("كلمه السر الخاصه ليست صحيحه", "message")
+		_ = sess.Save(c.Request(), c.Response())
+		return c.Redirect(http.StatusFound, "/signup")
+	}
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
+	user := models.User{Username: username, Password: string(hashedPassword)}
+	db.GormDB.Create(&user)
+	err := addSession(&c, user.ID)
+	if err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, "/")
 }
 
 func addSession(context *echo.Context, id uint) error {
