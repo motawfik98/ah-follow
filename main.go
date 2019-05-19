@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/middleware"
 	"html/template"
 	"io"
+	"os"
 )
 
 // Define the template registry struct
@@ -22,6 +23,7 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 }
 
 func main() {
+	_ = os.Setenv("administrator_password", "Nuccma6246V4")
 	db, _ := configurations.InitDB()
 
 	e := echo.New()

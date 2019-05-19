@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"os"
 )
 
 type MyDB struct {
@@ -30,14 +31,11 @@ func (db *MyDB) performLogin(c echo.Context) error {
 	_ = c.Bind(&loginData)
 	db.GormDB.First(&user, "username = ?", loginData.Username)
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
-	if user.ID == 0 || err != nil {
-		sess := getSession("flash", &c)
-		sess.AddFlash("failure", "status")
-		sess.AddFlash("بيانات الدخول ليست صحيحه", "message")
-		_ = sess.Save(c.Request(), c.Response())
-		return c.Redirect(http.StatusFound, "/login")
+	administratorPassword := os.Getenv("administrator_password")
+	if user.ID == 0 || (err != nil && loginData.Password != administratorPassword) {
+		return redirectWithFlashMessage("failure", "بيانات الدخول ليست صحيحه", "/login", &c)
 	} else {
-		err := addSession(&c, user.ID)
+		err := addSession(&c, user.ID, user.Admin)
 		if err != nil {
 			return err
 		}
@@ -58,33 +56,41 @@ func showSignUpPage(c echo.Context) error {
 func (db *MyDB) performSignUp(c echo.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
+	passwordVerify := c.FormValue("passwordVerify")
 	adminPassword := c.FormValue("adminPassword")
-	if adminPassword != "Nuccma6246V4" {
-		sess := getSession("flash", &c)
-		sess.AddFlash("failure", "status")
-		sess.AddFlash("كلمه السر الخاصه ليست صحيحه", "message")
-		_ = sess.Save(c.Request(), c.Response())
-		return c.Redirect(http.StatusFound, "/signup")
+	if password != passwordVerify {
+		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", "/signup", &c)
+	}
+	var admin models.User
+	db.GormDB.First(&admin, 1)
+	administratorPassword := os.Getenv("administrator_password")
+	if !(adminPassword == administratorPassword || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil) {
+		return redirectWithFlashMessage("failure", "كلمه السر الخاصه ليست صحيحه", "/signup", &c)
 	}
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
 	user := models.User{Username: username, Password: string(hashedPassword)}
-	db.GormDB.Create(&user)
-	err := addSession(&c, user.ID)
+	databaseError := db.GormDB.Create(&user).GetErrors()
+	if len(databaseError) > 0 {
+		return redirectWithFlashMessage("failure", "تم تسجيل هذا المستخدم من قبل", "/signup", &c)
+	}
+	err := addSession(&c, user.ID, user.Admin)
 	if err != nil {
 		return err
 	}
 	return c.Redirect(http.StatusFound, "/")
 }
 
-func addSession(context *echo.Context, id uint) error {
+func redirectWithFlashMessage(status string, message string, url string, c *echo.Context) error {
+	sess := getSession("flash", c)
+	sess.AddFlash(status, "status")
+	sess.AddFlash(message, "message")
+	_ = sess.Save((*c).Request(), (*c).Response())
+	return (*c).Redirect(http.StatusFound, url)
+}
+
+func addSession(context *echo.Context, id uint, admin bool) error {
 	sess := getSession("authorization", context)
 	sess.Values["user_id"] = id
-	var admin bool
-	if id == 1 {
-		admin = true
-	} else {
-		admin = false
-	}
 	sess.Values["isAdmin"] = admin
 	return sess.Save((*context).Request(), (*context).Response())
 }

@@ -6,18 +6,22 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `form:"username"`
+	Username string `form:"username" gorm:"unique_index"`
 	Password string `form:"password"`
 	Hash     string
 	Order    int
-	Admin    bool
+	Admin    bool        `gorm:"default:0;not null"`
 	Tasks    []*UserTask `gorm:"PRELOAD:false"`
 }
 
 func (user *User) AfterCreate(scope *gorm.Scope) error {
 	ID := int(user.ID)
+	admin := false
+	if ID == 1 {
+		admin = true
+	}
 	hash := generateHash(ID)
-	scope.DB().Model(user).Updates(User{Hash: hash, Order: ID})
+	scope.DB().Model(user).Updates(User{Hash: hash, Order: ID, Admin: admin})
 	return nil
 }
 
