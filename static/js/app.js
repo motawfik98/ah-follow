@@ -18,6 +18,13 @@ let cols = [
         }
     }, {data: "description", name: "description"},
     {
+        data: "CreatedAt",
+        render: function (data, type, row, meta) {
+            return data.substring(0, 10)
+        },
+        name: "created_at"
+    },
+    {
         data: "users",
         orderable: false,
         render: function (data) {
@@ -52,13 +59,6 @@ let cols = [
                 return "نعم";
             }
         }
-    },
-    {
-        data: "CreatedAt",
-        render: function (data, type, row, meta) {
-            return data.substring(0, 10)
-        },
-        name: "created_at"
     }
 ];
 
@@ -160,7 +160,7 @@ $(document).ready(function () {
         language: {
             url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
         },
-        order: [[cols.length - 1, 'desc']],
+        order: [[3, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
