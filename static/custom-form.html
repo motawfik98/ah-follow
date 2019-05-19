@@ -2,7 +2,7 @@
 
     <script>
         let isAdmin = {{.admin}};
-        let userID = {{.userID}}
+        let userID = {{.userID}};
     </script>
 
     <div id="customForm">
@@ -17,7 +17,7 @@
             <select class="form-control js-select2" multiple="multiple" id="selectedUsers">
                 <option></option>
                 {{range .users}}
-                    <option value="{{.ID}}">{{.Name}}</option>
+                    <option value="{{.ID}}">{{.Username}}</option>
                 {{end}}
             </select>
         </fieldset>
@@ -33,13 +33,16 @@
                                 <input type="text" name="name_1_repeat" class="form-control" id="name_1_repeat"
                                        placeholder="الاسم">
                             </div>
-                            <div class="col">
+                            <div class="col form-group">
                                 <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"
                                        placeholder="الموقف">
+                                <div class="invalid-feedback">
+                                    يجب ان تحدد الموقف قبل اعتباره الاخير
+                                </div>
                             </div>
                             <div class="col-1 form-check pl-3">
                                 <input type="checkbox" class="form-check-input" id="finalResponse_1_repeat">
-                                <label class="form-check-label" for="finalResponse_1_repeat">تم الرد نهائيا</label>
+                                <label class="form-check-label" for="finalResponse_1_repeat">موقف نهائي</label>
                             </div>
                         </div>
                     </div>

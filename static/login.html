@@ -10,7 +10,12 @@
                     <form action="/login" method="post">
                         <div class="form-group">
                             <label for="username">اسم المستخدم</label>
-                            <input name="username" class="form-control" id="username" placeholder="اسم المستخدم" type="text">
+                            <select class="form-control js-select2" id="username" name="username">
+                                <option></option>
+                                {{range .usernames}}
+                                    <option value="{{.}}">{{.}}</option>
+                                {{end}}
+                            </select>
                         </div> <!-- form-group// -->
                         <div class="form-group">
                             <label for="password">كلمه السر</label>

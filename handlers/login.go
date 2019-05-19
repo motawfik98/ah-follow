@@ -15,11 +15,13 @@ type MyDB struct {
 
 func (db *MyDB) showLoginPage(c echo.Context) error {
 	status, message := getFlashMessages(&c)
+	usernames := models.GetAllUsernames(db.GormDB)
 	return c.Render(http.StatusOK, "login.html", echo.Map{
 		"status":     status,
 		"message":    message,
 		"title":      "تسجيل دخول",
 		"hideNavBar": true,
+		"usernames":  usernames,
 	})
 }
 

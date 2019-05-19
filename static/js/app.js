@@ -18,6 +18,15 @@ let cols = [
         }
     }, {data: "description", name: "description"},
     {
+        data: "users",
+        orderable: false,
+        render: function (data) {
+            console.log(data);
+            return data.length;
+
+        }
+    },
+    {
         data: "people",
         name: "totalResponses",
         orderable: false,
@@ -27,6 +36,21 @@ let cols = [
                 if (data[i].final_response)
                     finalResponses++;
             return finalResponses + '/' + data.length;
+        }
+    },
+    {
+        data: {
+            final_action: "final_action",
+            users: "users"
+        },
+        name: "finalAction",
+        orderable: false,
+        render: function (data) {
+            if (data.final_action === "") {
+                return "لا";
+            } else {
+                return "نعم";
+            }
         }
     },
     {
@@ -40,10 +64,17 @@ let cols = [
 
 $(document).ready(function () {
 
-    $('.js-select2').select2({
+    $('#selectedUsers').select2({
         placeholder: "الاسم",
         dir: "rtl"
     });
+
+    $('#username').select2({
+        placeholder: "اسم المستخدم",
+        dir: "rtl"
+    });
+
+
 
     $(".datepicker").datepicker({
         format: 'yyyy-mm-dd'
@@ -94,12 +125,12 @@ $(document).ready(function () {
             create: {
                 button: "اضافه",
                 title: "اضافه تكليف",
-                submit: "اضافه"
+                submit: "حفظ التكليف"
             },
             edit: {
                 button: "تعديل",
                 title: "تعديل تكليف",
-                submit: "تعديل"
+                submit: "حفظ التكليف"
             },
             remove: {
                 button: "مسح",
@@ -267,13 +298,27 @@ function sendExtraFormDataAndValidate() {
         if (action === 'remove')
             return;
 
+        const $invalidFeedback = $(".invalid-feedback");
+        $invalidFeedback.hide();
+
         const description = this.field('description');
+
 
         if (description.val().length === 0) {
             description.error('يجب ان يوجد تكليف')
         }
 
+        let numberOfPeople = $('#czContainer_czMore_txtCount').val();
+        for (let i = 0; i < numberOfPeople; i++) {
+            if ($('#finalResponse_' + (i + 1) + '_repeat').is(':checked')) {
+                if ($('#action_' + (i + 1) + '_repeat').val() === "") {
+                    editor.error("حدث خطأ, برجاء مراجعه البيانات");
+                }
+            }
+        }
+
         if (this.inError()) {
+            $invalidFeedback.show();
             return false;
         }
 
@@ -285,7 +330,6 @@ function sendExtraFormDataAndValidate() {
             data.data["users_" + i] = selectedUsers[i];
         }
 
-        let numberOfPeople = $('#czContainer_czMore_txtCount').val();
         data.data['totalPeople'] = numberOfPeople;
         for (let i = 0; i < numberOfPeople; i++) {
             data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();

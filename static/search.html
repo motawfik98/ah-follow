@@ -29,31 +29,44 @@
                 </div>
             </div>
 
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1" value="all"
-                       checked>
-                <label class="form-check-label" for="inlineRadio1">استرجاع الكل</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
-                       value="replied">
-                <label class="form-check-label" for="inlineRadio2">استرجاع المردود عليهم</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio3"
-                       value="nonReplied">
-                <label class="form-check-label" for="inlineRadio3">استرجاع عدم المردود عليهم</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
-                       value="unseen">
-                <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
-                       value="seen">
-                <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
-            </div>
+            <fieldset class="border p-2 d-inline">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
+                           {{if .admin}}value="all" {{else}}value="notRepliedByAll"{{end}}
+                           checked>
+                    <label class="form-check-label" for="inlineRadio1">
+                        {{if .admin}}استرجاع الكل{{else}}لم يرد كل القائمين به{{end}}
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio3"
+                           value="nonReplied">
+                    <label class="form-check-label" for="inlineRadio3">استرجاع بدون اجراء نهائي</label>
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-2 d-inline ml-5">
+                <legend style="font-size:16px; height:5px">
+                    {{if .admin}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
+                </legend>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
+                           value="unseen">
+                    <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
+                           value="seen">
+                    <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
+                           {{if .admin}}value="replied" {{else}}value="all"{{end}}>
+                    <label class="form-check-label" for="inlineRadio2">الكل</label>
+                </div>
+            </fieldset>
+
         </form>
     </div>
 {{end}}

@@ -1,8 +1,9 @@
 {{ define "navbar" }}
 
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark justify-content-end mb-3">
-        <a class="navbar-brand" href="/">الرأيسيه</a>
-        <a href="/logout" class="btn btn-success ml-auto mr-1">تسجيل خروج</a>
+        <a class="navbar-brand" href="/">الرئيسيه</a>
+        <div class="ml-auto mr-1 text-white">{{.username}}</div>
+        <a href="/logout" class="btn btn-success">تسجيل خروج</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
             <span class="navbar-toggler-icon"></span>
         </button>

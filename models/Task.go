@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"github.com/jinzhu/gorm"
 )
 
@@ -40,15 +41,25 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		db = db.Where("final_action IS NULL")
 	} else if retrieveType == "unseen" {
 		if admin {
-			db = db.Where("seen = 0")
+			db = db.Where("seen = 0 AND final_action IS NOT NULL")
 		} else {
 			db = db.Where("user_tasks.seen = 0")
 		}
 	} else if retrieveType == "seen" {
 		if admin {
-			db = db.Where("seen = 1")
+			db = db.Where("seen = 1 AND final_action IS NOT NULL")
 		} else {
 			db = db.Where("user_tasks.seen = 1")
+		}
+	} else if retrieveType == "notRepliedByAll" {
+		//var ids []int
+		rows, _ := db.Table("tasks").Select("tasks.id, COUNT(people.id) totalPeople, final_response").
+			Joins("JOIN people ON tasks.id = people.task_id").
+			Group("tasks.id, final_response").Rows()
+		fmt.Println(rows)
+
+		for rows.Next() {
+
 		}
 	}
 	db = db.Preload("Users").Preload("People")
