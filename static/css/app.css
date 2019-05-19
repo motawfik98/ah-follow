@@ -8,11 +8,8 @@
     color: #f2e2e2;
 }
 
-div.DTED_Lightbox_Wrapper {
-    left: 1em;
-    right: 1em;
-    margin-left: 0;
-    width: auto;
+div.modal-dialog {
+    max-width: initial;
 }
 
 div.DTE_Field_Type_textarea textarea {
