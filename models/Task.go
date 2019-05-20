@@ -31,10 +31,12 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string, admin bool, userID uint) ([]Task, int, int) {
 	var tasks []Task
+	var totalNumberOfRowsInDatabase int
 	if !admin {
 		db = db.Table("tasks").Joins("JOIN user_tasks ON user_tasks.task_id = tasks.id")
 		db = db.Where("user_tasks.user_id = ?", userID)
 	}
+	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
 	if retrieveType == "replied" {
 		db = db.Where("final_action IS NOT NULL")
 	} else if retrieveType == "nonReplied" {
@@ -52,17 +54,12 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 			db = db.Where("user_tasks.seen = 1")
 		}
 	} else if retrieveType == "notRepliedByAll" {
-		//var ids []int
-		//var temp []temp
-		//subquery := db.Table("tasks").Select("tasks.id, COUNT(people.id) totalPeople, final_response").
-		//	Joins("JOIN people ON tasks.id = people.task_id").
-		//	Group("tasks.id, final_response").Scan(&temp)
-		//db.Select(subquery)
-		//for _, element := range temp {
-		//	fmt.Println(element.ID)
-		//	fmt.Println(element.finalResponse)
-		//	fmt.Println(element.totalPeople)
-		//}
+		var ids []int
+		db.Table("tasks").Select("tasks.id").
+			Joins("JOIN people ON tasks.id = people.task_id").
+			Where("final_response = 0").
+			Group("tasks.id").Pluck("tasks.id", &ids)
+		db = db.Where("tasks.id IN (?)", ids)
 	}
 	db = db.Preload("Users").Preload("People")
 	if descriptionSearch != "" {
@@ -85,13 +82,5 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	var totalNumberOfRowsAfterFilter int
 	db.Find(&tasks).Count(&totalNumberOfRowsAfterFilter)
 	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
-	var totalNumberOfRowsInDatabase int
-	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
-}
-
-type temp struct {
-	ID            int
-	totalPeople   int
-	finalResponse bool
 }

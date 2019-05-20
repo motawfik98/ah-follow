@@ -157,7 +157,7 @@ $(document).ready(function () {
             }
         },
         language: {
-            url: '//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Arabic.json'
+            url: '/source-codes/languages/datatables.language.json'
         },
         order: [[3, 'desc']],
         rowId: "ID",
