@@ -27,8 +27,9 @@ func (db *MyDB) AddTask(c echo.Context) error {
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
 	for i := 0; i < totalPeople; i++ {
+		finalResponse, _ := strconv.ParseBool(c.FormValue("data[people_finalResponse_" + strconv.Itoa(i) + "]"))
 		models.CreatePerson(db.GormDB, c.FormValue("data[people_name_"+strconv.Itoa(i)+"]"),
-			c.FormValue("data[people_action_"+strconv.Itoa(i)+"]"), taskToSave.ID)
+			c.FormValue("data[people_action_"+strconv.Itoa(i)+"]"), taskToSave.ID, finalResponse)
 	}
 
 	db.GormDB.Preload("Users").Preload("People").Find(&taskToSave, taskToSave.ID)
@@ -97,7 +98,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		db.GormDB.Where("name = ? AND task_id = ?", name, taskID).Find(&person)
 		var personID int
 		if person.ID == 0 {
-			personID = models.CreatePerson(db.GormDB, name, action, uint(taskID))
+			personID = models.CreatePerson(db.GormDB, name, action, uint(taskID), finalResponse)
 		} else {
 			person.ActionTaken = action
 			person.FinalResponse = finalResponse
