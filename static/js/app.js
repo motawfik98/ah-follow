@@ -3,6 +3,7 @@ let myTable;
 
 let cols = [
     {
+        width: "5%",
         data: "description",
         orderable: false,
         className: 'select-checkbox',
@@ -10,6 +11,7 @@ let cols = [
             return ''
         }
     }, {
+        width: "5%",
         class: "details-control",
         orderable: false,
         data: "description",
@@ -18,6 +20,7 @@ let cols = [
         }
     }, {data: "description", name: "description"},
     {
+        width: "10%",
         data: "CreatedAt",
         render: function (data, type, row, meta) {
             return data.substring(0, 10)
@@ -25,6 +28,7 @@ let cols = [
         name: "created_at"
     },
     {
+        width: "10%",
         data: "UpdatedAt",
         render: function (data, type, row, meta) {
             return data.substring(0, 10)
@@ -32,6 +36,7 @@ let cols = [
         name: "updated_at"
     },
     {
+        width: "5%",
         data: "users",
         orderable: false,
         render: function (data) {
@@ -40,6 +45,7 @@ let cols = [
         }
     },
     {
+        width: "5%",
         data: "people",
         name: "totalResponses",
         orderable: false,
@@ -52,6 +58,7 @@ let cols = [
         }
     },
     {
+        width: "5%",
         data: {
             final_action: "final_action",
             users: "users"

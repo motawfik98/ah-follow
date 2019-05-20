@@ -7,10 +7,10 @@ import (
 
 type Task struct {
 	gorm.Model
-	Description string         `gorm:"not null" form:"description" json:"description"`
+	Description string         `gorm:"not null;type:nvarchar(1024)" form:"description" json:"description"`
 	Users       []*UserTask    `gorm:"PRELOAD:false" json:"users"`
 	People      []Person       `gorm:"PRELOAD:false" json:"people"`
-	FinalAction sql.NullString `json:"final_action" gorm:"default: null"`
+	FinalAction sql.NullString `json:"final_action" gorm:"default: null;type:nvarchar(1024)"`
 	Seen        bool           `gorm:"default:1;not null" json:"seen"`
 	Hash        string
 }
