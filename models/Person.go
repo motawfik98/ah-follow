@@ -18,11 +18,12 @@ func (person *Person) AfterCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-func CreatePerson(db *gorm.DB, name string, actionTaken string, id uint) int {
+func CreatePerson(db *gorm.DB, name string, actionTaken string, id uint, finalResponse bool) int {
 	person := Person{
-		Name:        name,
-		ActionTaken: actionTaken,
-		TaskID:      id,
+		Name:          name,
+		ActionTaken:   actionTaken,
+		TaskID:        id,
+		FinalResponse: finalResponse,
 	}
 	db.Create(&person)
 	return int(person.ID)

@@ -27,9 +27,9 @@ td.unseen {
 td.details-control {
     background-repeat: no-repeat;
     background-position: center;
-    background-image: url(https://datatables.net/examples/resources/details_open.png);
+    background-image: url(../source-codes/css/images/details_open.png);
 }
 
 tr.details td.details-control {
-    background: url(https://datatables.net/examples/resources/details_close.png) no-repeat center center;
+    background: url(../source-codes/css/images/details_close.png) no-repeat center center;
 }

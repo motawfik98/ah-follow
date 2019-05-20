@@ -30,6 +30,8 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string, admin bool, userID uint) ([]Task, int, int) {
+
+	sortedColumn = "tasks." + sortedColumn
 	var tasks []Task
 	var totalNumberOfRowsInDatabase int
 	if !admin {
@@ -67,9 +69,12 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		db = db.Where("description LIKE ?", descriptionSearch)
 	}
 	if sentToSearch != "" {
+		var ids []int
 		sentToSearch = "%" + sentToSearch + "%"
-		db = db.Table("tasks").Joins("JOIN people ON tasks.id = people.task_id")
-		db = db.Where("people.name LIKE ?", sentToSearch)
+		db.Table("tasks").Select("DISTINCT tasks.id").
+			Joins("JOIN people ON tasks.id = people.task_id").
+			Where("people.name LIKE ?", sentToSearch).Pluck("tasks.id", &ids)
+		db = db.Where("tasks.id IN (?)", ids)
 	}
 	if minDateSearch != "" {
 		minDateSearch = minDateSearch + " 00:00:00.0000000 +02:00"

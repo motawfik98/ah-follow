@@ -223,8 +223,10 @@ function showPeopleActions() {
         const modifier = editor.modifier();
         let $selectedUsers = $('#selectedUsers');
         if (isAdmin) {
-            if (modifier) {
+            if (modifier && modifier.length > 0) {
                 markTaskAsSeen(modifier);
+            } else {
+                editor.close();
             }
         } else {
             $selectedUsers.attr('disabled', true);
