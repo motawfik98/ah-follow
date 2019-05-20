@@ -1,17 +1,17 @@
 package models
 
 import (
-	"fmt"
+	"database/sql"
 	"github.com/jinzhu/gorm"
 )
 
 type Task struct {
 	gorm.Model
-	Description string      `gorm:"not null" form:"description" json:"description"`
-	Users       []*UserTask `gorm:"PRELOAD:false" json:"users"`
-	People      []Person    `gorm:"PRELOAD:false" json:"people"`
-	FinalAction string      `json:"final_action" gorm:"default: null"`
-	Seen        bool        `gorm:"default:1;not null" json:"seen"`
+	Description string         `gorm:"not null" form:"description" json:"description"`
+	Users       []*UserTask    `gorm:"PRELOAD:false" json:"users"`
+	People      []Person       `gorm:"PRELOAD:false" json:"people"`
+	FinalAction sql.NullString `json:"final_action" gorm:"default: null"`
+	Seen        bool           `gorm:"default:1;not null" json:"seen"`
 	Hash        string
 }
 
@@ -53,14 +53,16 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		}
 	} else if retrieveType == "notRepliedByAll" {
 		//var ids []int
-		rows, _ := db.Table("tasks").Select("tasks.id, COUNT(people.id) totalPeople, final_response").
-			Joins("JOIN people ON tasks.id = people.task_id").
-			Group("tasks.id, final_response").Rows()
-		fmt.Println(rows)
-
-		for rows.Next() {
-
-		}
+		//var temp []temp
+		//subquery := db.Table("tasks").Select("tasks.id, COUNT(people.id) totalPeople, final_response").
+		//	Joins("JOIN people ON tasks.id = people.task_id").
+		//	Group("tasks.id, final_response").Scan(&temp)
+		//db.Select(subquery)
+		//for _, element := range temp {
+		//	fmt.Println(element.ID)
+		//	fmt.Println(element.finalResponse)
+		//	fmt.Println(element.totalPeople)
+		//}
 	}
 	db = db.Preload("Users").Preload("People")
 	if descriptionSearch != "" {
@@ -86,4 +88,10 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	var totalNumberOfRowsInDatabase int
 	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
+}
+
+type temp struct {
+	ID            int
+	totalPeople   int
+	finalResponse bool
 }

@@ -28,7 +28,6 @@ let cols = [
         data: "users",
         orderable: false,
         render: function (data) {
-            console.log(data);
             return data.length;
 
         }
@@ -53,7 +52,7 @@ let cols = [
         name: "finalAction",
         orderable: false,
         render: function (data) {
-            if (data.final_action === "") {
+            if (data.final_action.String === "") {
                 return "لا";
             } else {
                 return "نعم";
@@ -229,7 +228,7 @@ function showPeopleActions() {
             }
         } else {
             $selectedUsers.attr('disabled', true);
-            if (modifier) {
+            if (modifier.length > 0) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.users.length; i++) {
                     markPersonTaskAsSeen(data, i);
@@ -240,8 +239,10 @@ function showPeopleActions() {
         $selectedUsers.val(null).trigger('change');
         $('#czContainer').empty();
         const selectedPeopleIDs = [];
-        if (modifier) {
+        if (modifier.length > 0) {
             const data = myTable.row(modifier).data();
+            const finalAction = this.field('final_action');
+            finalAction.val(data.final_action.String);
             for (let i = 1; i <= data.users.length; i++) {
                 selectedPeopleIDs.push(data.users[i - 1].user.ID);
             }
@@ -252,6 +253,8 @@ function showPeopleActions() {
             for (i = 1; i <= data.people.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
+        } else {
+            editor.close();
         }
     });
 }

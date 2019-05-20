@@ -7,7 +7,7 @@ import (
 )
 
 func InitDB() (*gorm.DB, error) {
-	db, err := gorm.Open("mssql", "sqlserver://remote:mohamed@localhost:1433?database=ah_follow")
+	db, err := gorm.Open("mssql", "sqlserver://ahtawfik:Nuccma6246V55@localhost:1433?database=ah_follow")
 	if err == nil {
 		db.LogMode(true)
 		db.AutoMigrate(&models.User{}, &models.Task{})

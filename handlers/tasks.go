@@ -47,6 +47,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			"message": "Invalid Request",
 		})
 	}
+
 	description := c.FormValue("data[description]")
 	finalAction := c.FormValue("data[final_action]")
 
@@ -55,8 +56,12 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	if isAdmin {
 		db.GormDB.Model(&task).UpdateColumn("description", description)
 	}
-	if finalAction != task.FinalAction {
-		db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
+	if finalAction != task.FinalAction.String {
+		if finalAction == "" {
+			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
+		} else {
+			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
+		}
 	}
 
 	if isAdmin {
