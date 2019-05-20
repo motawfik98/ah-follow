@@ -25,6 +25,13 @@ let cols = [
         name: "created_at"
     },
     {
+        data: "UpdatedAt",
+        render: function (data, type, row, meta) {
+            return data.substring(0, 10)
+        },
+        name: "updated_at"
+    },
+    {
         data: "users",
         orderable: false,
         render: function (data) {
@@ -159,7 +166,7 @@ $(document).ready(function () {
         language: {
             url: '/source-codes/languages/datatables.language.json'
         },
-        order: [[3, 'desc']],
+        order: [[4, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
@@ -194,7 +201,18 @@ $(document).ready(function () {
     showPeopleActions();
     openModalOnDoubleClick();
     redrawTableOnModalClose();
+    preventModalOpeningIfNoRecordsAreFound();
 });
+
+function preventModalOpeningIfNoRecordsAreFound() {
+    editor.on('preOpen', function (e, type, action) {
+        const modifier = editor.modifier();
+        if (action === "edit" && modifier.length < 1) {
+            console.log(modifier);
+            return false;
+        }
+    })
+}
 
 function redrawTableOnModalClose() {
     editor.on('close', function () {
@@ -223,14 +241,12 @@ function showPeopleActions() {
         const modifier = editor.modifier();
         let $selectedUsers = $('#selectedUsers');
         if (isAdmin) {
-            if (modifier && modifier.length > 0) {
+            if (modifier) {
                 markTaskAsSeen(modifier);
-            } else {
-                editor.close();
             }
         } else {
             $selectedUsers.attr('disabled', true);
-            if (modifier.length > 0) {
+            if (modifier) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.users.length; i++) {
                     markPersonTaskAsSeen(data, i);
@@ -241,7 +257,7 @@ function showPeopleActions() {
         $selectedUsers.val(null).trigger('change');
         $('#czContainer').empty();
         const selectedPeopleIDs = [];
-        if (modifier.length > 0) {
+        if (modifier) {
             const data = myTable.row(modifier).data();
             const finalAction = this.field('final_action');
             finalAction.val(data.final_action.String);
@@ -255,8 +271,6 @@ function showPeopleActions() {
             for (i = 1; i <= data.people.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
-        } else {
-            editor.close();
         }
     });
 }

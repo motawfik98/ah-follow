@@ -86,6 +86,13 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	}
 	var totalNumberOfRowsAfterFilter int
 	db.Find(&tasks).Count(&totalNumberOfRowsAfterFilter)
+	if sortedColumn != "created_at" {
+		if admin {
+			db = db.Order("tasks.seen")
+		} else {
+			db = db.Order("user_tasks.seen")
+		}
+	}
 	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
 }
