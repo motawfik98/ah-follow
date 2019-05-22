@@ -27,6 +27,7 @@ func main() {
 	db, _ := configurations.InitDB()
 
 	e := echo.New()
+	//e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("ahtawfik.ddns.net")
 	e.Static("/", "static")
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 	e.Use(middleware.Logger())
@@ -39,5 +40,6 @@ func main() {
 	myDb := handlers.MyDB{GormDB: db}
 	handlers.InitializeRoutes(e, &myDb)
 
+	//e.Logger.Fatal(e.StartAutoTLS(":443"))
 	e.Logger.Fatal(e.Start(":8081"))
 }
