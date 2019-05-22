@@ -4,6 +4,8 @@ import (
 	"../models"
 	"fmt"
 	"github.com/labstack/echo"
+	"gopkg.in/toast.v1"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -19,11 +21,14 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	db.GormDB.Create(&taskToSave)
 
 	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
+	var users []uint
 	for i := 0; i < totalUsers; i++ {
 		id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
 		uid, _ := strconv.ParseUint(id, 10, 64)
 		models.CreateUserTask(db.GormDB, taskToSave.ID, uint(uid))
+		users = append(users, uint(uid))
 	}
+	pushNotification(c, users, "تم اضافه تكليف جديد")
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
 	for i := 0; i < totalPeople; i++ {
@@ -58,31 +63,36 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		db.GormDB.Model(&task).UpdateColumn("description", description)
 	}
 	if finalAction != task.FinalAction.String {
+		var adminsIDs []uint
+		db.GormDB.Model(&models.User{}).Where("admin = 1").Pluck("id", &adminsIDs)
 		if finalAction == "" {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
+			pushNotification(c, adminsIDs, "تم الغاء الاجراء النهائي للتكليف")
 		} else {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
+			pushNotification(c, adminsIDs, "تم تعديل الاجراء النهائي للتكليف")
 		}
 	}
 
 	if isAdmin {
 		totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
-		var ids []int
+		var ids []uint
 		for i := 0; i < totalUsers; i++ {
 			var userTask models.UserTask
 
 			id := c.FormValue("data[users_" + strconv.Itoa(i) + "]")
 			uid, _ := strconv.ParseUint(id, 10, 64)
-			ids = append(ids, int(uid))
+			ids = append(ids, uint(uid))
 			db.GormDB.Where("task_id = ? AND user_id = ?", taskID, uid).Find(&userTask)
 			if userTask.TaskID == 0 && userTask.UserID == 0 {
 				models.CreateUserTask(db.GormDB, uint(taskID), uint(uid))
 			}
 		}
 		if ids == nil {
-			ids = []int{0}
+			ids = []uint{0}
 		}
 		db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
+		pushNotification(c, ids, "تم تعديل التكليف")
 	}
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
@@ -182,4 +192,23 @@ type dtOutput struct {
 	RecordsTotal    int           `json:"recordsTotal"`
 	RecordsFiltered int           `json:"recordsFiltered"`
 	Data            []models.Task `json:"data"`
+}
+
+func pushNotification(c echo.Context, usersToSendTo []uint, message string) {
+	//for _, element := range usersToSendTo {
+	notification := toast.Notification{
+		AppID:   "Chrome",
+		Title:   "My notification",
+		Message: message,
+		Icon:    "E:/GO/ah-follow/notification.png", // This file must exist (remove this line if it doesn't)
+		Actions: []toast.Action{
+			{"protocol", "Index", "http://192.168.1.34:8081/"},
+			{"protocol", "Logout", "http://192.168.1.34:8081/logout"},
+		},
+	}
+	err := notification.Push()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//}
 }
