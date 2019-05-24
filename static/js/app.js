@@ -1,6 +1,6 @@
 let editor; // use a global for the submit and return data rendering in the examples
 let myTable;
-
+// showNotificationIfFound();
 let cols = [
     {
         width: "5%",
@@ -86,7 +86,6 @@ $(document).ready(function () {
         placeholder: "اسم المستخدم",
         dir: "rtl"
     });
-
 
 
     $(".datepicker").datepicker({
@@ -210,6 +209,24 @@ $(document).ready(function () {
     redrawTableOnModalClose();
     preventModalOpeningIfNoRecordsAreFound();
 });
+
+const source = new EventSource("/tasks/notifications");
+source.onmessage = function (e) {
+    let data = e.data.split("\n");
+    if ((data[0] === 'true' && !isAdmin) || (data[0] === 'false' && isAdmin)) {
+        Push.create("التكليفات الوزاريه", {
+            body: data[1],
+            icon: "/img/notification.png"
+        });
+    }
+};
+source.onerror = function (e) {
+
+};
+source.onopen = function (e) {
+
+};
+
 
 function preventModalOpeningIfNoRecordsAreFound() {
     editor.on('preOpen', function (e, type, action) {

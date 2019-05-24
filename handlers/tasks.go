@@ -4,14 +4,28 @@ import (
 	"../models"
 	"fmt"
 	"github.com/labstack/echo"
-	"gopkg.in/toast.v1"
-	"log"
 	"net/http"
 	"strconv"
 )
 
 type datatableTask struct {
 	Data []interface{} `json:"data"`
+}
+
+type notification struct {
+	IsValid bool
+	IsAdmin bool
+	Body    string
+	SeenBy  int
+}
+
+var notify = &notification{}
+
+func changeNotifyValues(isValid bool, isAdmin bool, body string) {
+	notify.IsValid = isValid
+	notify.IsAdmin = isAdmin
+	notify.Body = body
+	notify.SeenBy = 0
 }
 
 func (db *MyDB) AddTask(c echo.Context) error {
@@ -28,7 +42,7 @@ func (db *MyDB) AddTask(c echo.Context) error {
 		models.CreateUserTask(db.GormDB, taskToSave.ID, uint(uid))
 		users = append(users, uint(uid))
 	}
-	pushNotification(c, users, "تم اضافه تكليف جديد")
+	changeNotifyValues(true, true, "تم اضافه تكليف جديد")
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
 	for i := 0; i < totalPeople; i++ {
@@ -67,10 +81,10 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		db.GormDB.Model(&models.User{}).Where("admin = 1").Pluck("id", &adminsIDs)
 		if finalAction == "" {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
-			pushNotification(c, adminsIDs, "تم الغاء الاجراء النهائي للتكليف")
+			changeNotifyValues(true, false, "تم الغاء الاجراء النهائي للتكليف")
 		} else {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
-			pushNotification(c, adminsIDs, "تم تعديل الاجراء النهائي للتكليف")
+			changeNotifyValues(true, false, "تم تعديل الاجراء النهائي للتكليف")
 		}
 	}
 
@@ -92,7 +106,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			ids = []uint{0}
 		}
 		db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
-		pushNotification(c, ids, "تم تعديل التكليف")
+		changeNotifyValues(true, true, "تم تعديل التكليف")
 	}
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
@@ -194,21 +208,23 @@ type dtOutput struct {
 	Data            []models.Task `json:"data"`
 }
 
-func pushNotification(c echo.Context, usersToSendTo []uint, message string) {
-	//for _, element := range usersToSendTo {
-	notification := toast.Notification{
-		AppID:   "Chrome",
-		Title:   "My notification",
-		Message: message,
-		Icon:    "E:/GO/ah-follow/notification.png", // This file must exist (remove this line if it doesn't)
-		Actions: []toast.Action{
-			{"protocol", "Index", "http://192.168.1.34:8081/"},
-			{"protocol", "Logout", "http://192.168.1.34:8081/logout"},
-		},
+func PushNotification(c echo.Context) error {
+	// Set the headers related to event streaming.
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+
+	//ticker := time.NewTicker(1000 * time.Millisecond)
+	if notify.IsValid {
+		_, _ = c.Response().Writer.Write([]byte("event:message\n"))
+		_, _ = c.Response().Writer.Write([]byte("data:" + strconv.FormatBool(notify.IsAdmin) + "\n"))
+		_, _ = c.Response().Writer.Write([]byte("data:" + notify.Body + "\n\n"))
+		notify.SeenBy++
+		if notify.SeenBy == 2 {
+			notify.IsValid = false
+		}
+		c.Response().Flush()
 	}
-	err := notification.Push()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	//}
+
+	return nil
 }

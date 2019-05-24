@@ -25,4 +25,6 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	tasks.POST("/edit", db.EditTask)
 	tasks.POST("/person/seen", db.ChangePersonSeen)
 	tasks.GET("/getData", db.GetTasks)
+
+	tasks.GET("/notifications", PushNotification)
 }
