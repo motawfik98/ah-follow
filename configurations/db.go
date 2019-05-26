@@ -11,7 +11,7 @@ func InitDB() (*gorm.DB, error) {
 	if err == nil {
 		db.LogMode(true)
 		db.AutoMigrate(&models.User{}, &models.Task{})
-		db.AutoMigrate(&models.UserTask{}, &models.Person{})
+		db.AutoMigrate(&models.UserTask{}, &models.Person{}, &models.Subscription{})
 		db = db.Set("gorm:auto_preload", true)
 	}
 	return db, err

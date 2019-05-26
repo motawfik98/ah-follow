@@ -12,22 +12,6 @@ type datatableTask struct {
 	Data []interface{} `json:"data"`
 }
 
-type notification struct {
-	IsValid bool
-	IsAdmin bool
-	Body    string
-	SeenBy  int
-}
-
-var notify = &notification{}
-
-func changeNotifyValues(isValid bool, isAdmin bool, body string) {
-	notify.IsValid = isValid
-	notify.IsAdmin = isAdmin
-	notify.Body = body
-	notify.SeenBy = 0
-}
-
 func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("data[description]"),
@@ -42,7 +26,8 @@ func (db *MyDB) AddTask(c echo.Context) error {
 		models.CreateUserTask(db.GormDB, taskToSave.ID, uint(uid))
 		users = append(users, uint(uid))
 	}
-	changeNotifyValues(true, true, "تم اضافه تكليف جديد")
+	_, isAdmin := getUserStatus(&c)
+	sendNotification("تم اضافه تكليف جديد", isAdmin, db)
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
 	for i := 0; i < totalPeople; i++ {
@@ -81,10 +66,10 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		db.GormDB.Model(&models.User{}).Where("admin = 1").Pluck("id", &adminsIDs)
 		if finalAction == "" {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
-			changeNotifyValues(true, false, "تم الغاء الاجراء النهائي للتكليف")
+			sendNotification("تم الغاء الاجراء النهائي للتكليف", isAdmin, db)
 		} else {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
-			changeNotifyValues(true, false, "تم تعديل الاجراء النهائي للتكليف")
+			sendNotification("تم تعديل الاجراء النهائي للتكليف", isAdmin, db)
 		}
 	}
 
@@ -106,7 +91,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			ids = []uint{0}
 		}
 		db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
-		changeNotifyValues(true, true, "تم تعديل التكليف")
+		sendNotification("تم تعديل التكليف", isAdmin, db)
 	}
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]"))
@@ -206,25 +191,4 @@ type dtOutput struct {
 	RecordsTotal    int           `json:"recordsTotal"`
 	RecordsFiltered int           `json:"recordsFiltered"`
 	Data            []models.Task `json:"data"`
-}
-
-func PushNotification(c echo.Context) error {
-	// Set the headers related to event streaming.
-	c.Response().Header().Set("Content-Type", "text/event-stream")
-	c.Response().Header().Set("Cache-Control", "no-cache")
-	c.Response().Header().Set("Connection", "keep-alive")
-
-	//ticker := time.NewTicker(1000 * time.Millisecond)
-	if notify.IsValid {
-		_, _ = c.Response().Writer.Write([]byte("event:message\n"))
-		_, _ = c.Response().Writer.Write([]byte("data:" + strconv.FormatBool(notify.IsAdmin) + "\n"))
-		_, _ = c.Response().Writer.Write([]byte("data:" + notify.Body + "\n\n"))
-		notify.SeenBy++
-		if notify.SeenBy == 2 {
-			notify.IsValid = false
-		}
-		c.Response().Flush()
-	}
-
-	return nil
 }

@@ -6,12 +6,13 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `form:"username" gorm:"unique_index"`
-	Password string `form:"password"`
-	Hash     string
-	Order    int
-	Admin    bool        `gorm:"default:0;not null"`
-	Tasks    []*UserTask `gorm:"PRELOAD:false"`
+	Username      string `form:"username" gorm:"unique_index"`
+	Password      string `form:"password"`
+	Hash          string
+	Order         int
+	Admin         bool            `gorm:"default:0;not null"`
+	Tasks         []*UserTask     `gorm:"PRELOAD:false"`
+	Subscriptions []*Subscription `gorm:"PRELOAD:false"`
 }
 
 func (user *User) AfterCreate(scope *gorm.Scope) error {
