@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/labstack/echo"
-	"strconv"
 )
 
 const (
@@ -19,13 +18,18 @@ func serveServiceWorkerFile(context echo.Context) error {
 }
 
 func (db *MyDB) registerClientToNotify(c echo.Context) error {
-	userID, _ := getUserStatus(&c)
-	subscription := models.Subscription{}
-	subscription.Endpoint = c.FormValue("endpoint")
-	subscription.Auth = c.FormValue("auth")
-	subscription.P256dh = c.FormValue("p256dh")
-	subscription.UserID = userID
-	db.GormDB.Create(&subscription)
+	userID, isAdmin := getUserStatus(&c)
+	subscription := models.Subscription{
+		Endpoint: c.FormValue("endpoint"),
+		Auth:     c.FormValue("auth"),
+		P256dh:   c.FormValue("p256dh"),
+		UserID:   userID,
+		IsAdmin:  isAdmin,
+	}
+	databaseError := db.GormDB.Create(&subscription).GetErrors()
+	if len(databaseError) > 0 {
+		db.GormDB.Model(&subscription).UpdateColumn("is_admin", isAdmin)
+	}
 	return nil
 }
 
@@ -33,6 +37,9 @@ func sendNotification(message string, isAdmin bool, db *MyDB) {
 	var subscriptions []models.Subscription
 	db.GormDB.Find(&subscriptions)
 	for _, element := range subscriptions {
+		if isAdmin == element.IsAdmin {
+			continue
+		}
 		subscription := &webpush.Subscription{
 			Endpoint: element.Endpoint,
 			Keys: webpush.Keys{
@@ -40,8 +47,7 @@ func sendNotification(message string, isAdmin bool, db *MyDB) {
 				P256dh: element.P256dh,
 			},
 		}
-		fullMessage := message + "\n" + strconv.FormatBool(isAdmin)
-		_, err := webpush.SendNotification([]byte(fullMessage), subscription, &webpush.Options{
+		_, err := webpush.SendNotification([]byte(message), subscription, &webpush.Options{
 			Subscriber:      "motawfik1998@gmail.com", // Do not include "mailto:"
 			VAPIDPublicKey:  vapidPublicKey,
 			VAPIDPrivateKey: vapidPrivateKey,

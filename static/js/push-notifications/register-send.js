@@ -1,4 +1,4 @@
-navigator.serviceWorker.register('service-worker.js?isAdmin=' + encodeURIComponent(isAdmin));
+navigator.serviceWorker.register('service-worker.js');
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -23,8 +23,7 @@ navigator.serviceWorker.ready
             .then(async function (subscription) {
                 console.log(JSON.stringify(subscription));
                 if (subscription) {
-                    console.log("subscribed");
-                    return null;
+                    return subscription;
                 }
                 console.log("No subscription available");
                 const permission = await requestNotificationPermission();
@@ -39,13 +38,11 @@ navigator.serviceWorker.ready
                 }
             });
     }).then(function (subscription) {
-    if (subscription) {
-        let jsonSubscription = JSON.parse(JSON.stringify(subscription));
+    let jsonSubscription = JSON.parse(JSON.stringify(subscription));
 
-        $.post('/notifications/register', {
-            endpoint: jsonSubscription.endpoint,
-            auth: jsonSubscription.keys.auth,
-            p256dh: jsonSubscription.keys.p256dh,
-        });
-    }
+    $.post('/notifications/register', {
+        endpoint: jsonSubscription.endpoint,
+        auth: jsonSubscription.keys.auth,
+        p256dh: jsonSubscription.keys.p256dh,
+    });
 });

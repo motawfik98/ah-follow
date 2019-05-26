@@ -9,6 +9,7 @@ type Subscription struct {
 	Auth     string `json:"auth"`
 	P256dh   string `json:"p256dh"`
 	UserID   uint   `json:"user_id"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 func (subscription *Subscription) AfterCreate(scope *gorm.Scope) error {
