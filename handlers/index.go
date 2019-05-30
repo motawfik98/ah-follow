@@ -30,3 +30,10 @@ func (db *MyDB) index(c echo.Context) error {
 		"username": username,
 	})
 }
+
+func serveDataTablesEditorFile(context echo.Context) error {
+	context.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1.
+	context.Response().Header().Set("Pragma", "no-cache")                                   // HTTP 1.0.
+	context.Response().Header().Set("Expires", "0")                                         // Proxies.
+	return context.File("static/js/dataTables.editor.js")
+}

@@ -29,4 +29,5 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	notifications := e.Group("/notifications")
 	notifications.POST("/register", db.registerClientToNotify)
 	e.GET("/service-worker.js", serveServiceWorkerFile)
+	e.GET("/js/dataTables.editor.js", serveDataTablesEditorFile)
 }
