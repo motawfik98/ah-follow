@@ -2,6 +2,7 @@ package models
 
 import "github.com/jinzhu/gorm"
 
+// this struct is to store the `sent to` in each task
 type Person struct {
 	gorm.Model
 	Name          string `json:"name"`
@@ -11,6 +12,7 @@ type Person struct {
 	TaskID        uint
 }
 
+// this function generates the hash then update the Person created
 func (person *Person) AfterCreate(scope *gorm.Scope) error {
 	ID := int(person.ID)
 	hash := generateHash(ID)
@@ -18,6 +20,7 @@ func (person *Person) AfterCreate(scope *gorm.Scope) error {
 	return nil
 }
 
+// this function takes the parameters required to create a new Person, then adds him to the database
 func CreatePerson(db *gorm.DB, name string, actionTaken string, id uint, finalResponse bool) int {
 	person := Person{
 		Name:          name,

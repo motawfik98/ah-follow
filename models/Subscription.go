@@ -2,6 +2,7 @@ package models
 
 import "github.com/jinzhu/gorm"
 
+// this struct stores the data needed to apply the `webpush` package and API
 type Subscription struct {
 	gorm.Model
 	Hash     string
@@ -12,6 +13,7 @@ type Subscription struct {
 	IsAdmin  bool   `json:"is_admin"`
 }
 
+// this function generates the hash then update the Subscription created
 func (subscription *Subscription) AfterCreate(scope *gorm.Scope) error {
 	ID := int(subscription.ID)
 	hash := generateHash(ID)

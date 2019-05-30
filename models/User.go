@@ -15,6 +15,7 @@ type User struct {
 	Subscriptions []*Subscription `gorm:"PRELOAD:false"`
 }
 
+// this function updates the Hash and Admin column of the user after create
 func (user *User) AfterCreate(scope *gorm.Scope) error {
 	ID := int(user.ID)
 	admin := false
@@ -26,6 +27,7 @@ func (user *User) AfterCreate(scope *gorm.Scope) error {
 	return nil
 }
 
+// this function gets all the usernames that are in the database
 func GetAllUsernames(db *gorm.DB) []string {
 	var usernames []string
 	db.Table("users").Order("[order] ASC").Pluck("username", &usernames)
