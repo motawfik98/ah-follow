@@ -64,7 +64,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		// gets the `ids` of the tasks that there is any person who's final response is equal to 0
 		db.Table("tasks").Select("tasks.id").
 			Joins("JOIN people ON tasks.id = people.task_id").
-			Where("final_response = 0").
+			Where("final_response = 0 AND people.deleted_at IS NULL").
 			Group("tasks.id").Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
 		db = db.Where("tasks.id IN (?)", ids)
