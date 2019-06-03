@@ -18,18 +18,34 @@ div.DTE_Field_Type_textarea textarea {
     height: 120px;
 }
 
-
-td.unseen {
-    background: burlywood;
-}
-
-
-td.details-control {
+td.control {
+    width: 5%;
+    max-width: 16px;
     background-repeat: no-repeat;
     background-position: center;
     background-image: url(../source-codes/css/images/details_open.png);
 }
 
-tr.details td.details-control {
-    background: url(../source-codes/css/images/details_close.png) no-repeat center center;
+tr.parent td.control {
+    width: 5%;
+    max-width: 16px;
+    background-image: url(../source-codes/css/images/details_close.png);
+}
+
+td.unseen {
+    background-color: burlywood;
+}
+
+tr td.select-checkbox {
+    width: 5%;
+}
+
+html {
+    overflow: scroll;
+    -webkit-overflow-scrolling: touch;
+}
+
+.text-wrap {
+    white-space: normal;
+    width: 100%;
 }

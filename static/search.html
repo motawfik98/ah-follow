@@ -1,6 +1,6 @@
 {{ define "search" }}
-    <div class="btn-group float-right" roleValue="group" aria-label="Basic example">
-        <a class="mr-3" id="resetSearch" href="">الغاء البحث</a>
+    <div class="btn-group float-md-right d-flex" roleValue="group" aria-label="Basic example">
+        <a class="mr-3 btn btn-link" id="resetSearch" href="">الغاء البحث</a>
         <button class="btn btn-secondary mr-3"
                 data-toggle="collapse" data-target="#searchCollapse"
                 aria-expanded="false" aria-controls="searchCollapse">بحث
@@ -11,19 +11,19 @@
         <form id="searchForm">
 
             <div class="form-row">
-                <div class="form-group col-6">
+                <div class="form-group col-12 col-md-6">
                     <label for="description">التكليف</label>
                     <input class="form-control search" id="description" placeholder="التكليف"/>
                 </div>
-                <div class="form-group col">
+                <div class="form-group col-12 col-md">
                     <label for="sent_to">القائم به</label>
                     <input type="text" class="form-control search" id="sent_to" placeholder="القائم به"/>
                 </div>
-                <div class="form-group col">
+                <div class="form-group col-6 col-md">
                     <label for="min">من</label>
                     <input type="text" class="form-control search datepicker" id="min" placeholder="من"/>
                 </div>
-                <div class="form-group col">
+                <div class="form-group col-6 col-md">
                     <label for="max">الى</label>
                     <input type="text" class="form-control search datepicker" id="max" placeholder="الى"/>
                 </div>
@@ -32,8 +32,8 @@
 
         </form>
     </div>
-    <div class="row my-2">
-        <fieldset class="border p-2 d-inline">
+    <div class="row my-2 d-block">
+        <fieldset class="border p-2 d-md-inline">
             <legend style="font-size:16px; height:5px">
                 {{if .admin}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
             </legend>
@@ -55,7 +55,7 @@
             </div>
         </fieldset>
 
-        <fieldset class="border p-2 d-inline ml-5">
+        <fieldset class="border p-2 d-md-inline ml-md-5">
             <div class="form-check form-check-inline">
                 <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
                        {{if .admin}}value="all" {{else}}value="notRepliedByAll"{{end}}>

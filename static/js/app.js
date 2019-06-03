@@ -1,50 +1,56 @@
 let editor; // use a global for the submit and return data rendering in the examples
 let myTable;
-// showNotificationIfFound();
+const maxTextLength = ($(window).width() < 991.98) ? 50 : 180;
+console.log($(window).width());
+console.log(maxTextLength);
 let cols = [
     {
+        width: "5%",
+        class: "control",
+        orderable: false,
+        data: "description",
+        render: function () {
+            return '';
+        }
+    }, {
         width: "5%",
         data: "description",
         orderable: false,
         className: 'select-checkbox',
         render: function () {
             return ''
-        }
+        },
     }, {
-        width: "5%",
-        class: "details-control",
-        orderable: false,
         data: "description",
-        render: function () {
-            return '';
-        }
-    }, {data: "description", name: "description"},
-    {
+        name: "description",
+        render: function (data, type) {
+            return type === 'display' && data.length > maxTextLength ?
+                "<div class='text-wrap'>" + data.substr(0, maxTextLength) + "...</div>" :
+                "<div class='text-wrap'>" + data + "</div>";
+        },
+    }, {
         width: "10%",
         data: "CreatedAt",
         render: function (data, type, row, meta) {
             return data.substring(0, 10)
         },
-        name: "created_at"
-    },
-    {
+        name: "created_at",
+    }, {
         width: "10%",
         data: "UpdatedAt",
         render: function (data, type, row, meta) {
             return data.substring(0, 10)
         },
-        name: "updated_at"
-    },
-    {
+        name: "updated_at",
+    }, {
         width: "5%",
         data: "users",
         orderable: false,
         render: function (data) {
             return data.length;
 
-        }
-    },
-    {
+        },
+    }, {
         width: "5%",
         data: "people",
         name: "totalResponses",
@@ -55,9 +61,8 @@ let cols = [
                 if (data[i].final_response)
                     finalResponses++;
             return finalResponses + '/' + data.length;
-        }
-    },
-    {
+        },
+    }, {
         width: "5%",
         data: {
             final_action: "final_action",
@@ -71,6 +76,22 @@ let cols = [
             } else {
                 return "نعم";
             }
+        },
+    }, {
+        width: "5%",
+        orderable: false,
+        name: "fullDescription",
+        data: "description",
+        render: function (data) {
+            return data;
+        }
+    }, {
+        width: "5%",
+        orderable: false,
+        name: "peopleActions",
+        data: "people",
+        render: function (data) {
+            return generatePeopleTable(data);
         }
     }
 ];
@@ -158,6 +179,43 @@ $(document).ready(function () {
 
 
     myTable = $('#baseTable').DataTable({
+        responsive: {
+            details: {
+                type: 'column',
+                target: 'td:first-child',
+                renderer: function (api, rowIdx, columns) {
+                    let data = $.map(columns, function (col, i) {
+                        let finalTable = "";
+                        if (col.title === 'hidden people') {
+                            finalTable += '<tr data-dt-row="' + col.rowIndex + '" data-dt-column="' + col.columnIndex + '">' +
+                                '<td colspan="2">' + col.data + '</td>' +
+                                '</tr>'
+                        } else if (col.title === 'full description') {
+                            if (col.data.length > maxTextLength) {
+                                finalTable += '<tr data-dt-row="' + col.rowIndex + '" data-dt-column="' + col.columnIndex + '">' +
+                                    '<td>التكليف:</td> ' +
+                                    '<td>' + col.data + '</td>' +
+                                    '</tr>'
+                            }
+                        } else {
+                            finalTable += col.hidden ?
+                                '<tr data-dt-row="' + col.rowIndex + '" data-dt-column="' + col.columnIndex + '">' +
+                                '<td>' + col.title + ':' + '</td> ' +
+                                '<td>' + col.data + '</td>' +
+                                '</tr>'
+                                :
+                                '';
+                        }
+
+                        return finalTable;
+                    }).join('');
+
+                    return data ?
+                        $('<table/>').append(data) :
+                        false;
+                }
+            }
+        },
         initComplete: configureTableForNonAdmins,
         createdRow: function (row, data, dataIndex) {
             if (isAdmin && !data.seen) {
@@ -172,7 +230,7 @@ $(document).ready(function () {
         language: {
             url: '/source-codes/languages/datatables.language.json'
         },
-        order: [[4, 'desc']],
+        order: [[3, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
@@ -192,18 +250,53 @@ $(document).ready(function () {
         dom: 'Brtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
         select: {
             style: 'os',
-            selector: 'td:first-child'
+            selector: 'td:nth-child(2)'
         },     // enable single row selection
         buttons: [
-            {extend: "create", editor: editor, name: "createButton"},
-            {extend: "edit", editor: editor, name: "editButton"},
-            {extend: "remove", editor: editor, name: "removeButton"}
+            {
+                extend: "create",
+                editor: editor,
+                name: "createButton",
+                formButtons: [
+                    "اضافه تكليف",
+                    {
+                        text: 'الرجوع', action: function () {
+                            this.close();
+                        }
+                    }
+                ]
+            },
+            {
+                extend: "edit",
+                editor: editor,
+                name: "editButton",
+                formButtons: [
+                    "تعديل تكليف",
+                    {
+                        text: 'الرجوع', action: function () {
+                            this.close();
+                        }
+                    }
+                ]
+            },
+            {
+                extend: "remove",
+                editor: editor,
+                name: "removeButton",
+                formButtons: [
+                    "مسح تكليف",
+                    {
+                        text: 'الرجوع', action: function () {
+                            this.close();
+                        }
+                    }
+                ]
+            }
         ]
     });
 
     search();
     sendExtraFormDataAndValidate();
-    showHideChild();
     showPeopleActions();
     openModalOnDoubleClick();
     redrawTableOnModalClose();
@@ -211,13 +304,10 @@ $(document).ready(function () {
 });
 
 
-
-
 function preventModalOpeningIfNoRecordsAreFound() {
     editor.on('preOpen', function (e, type, action) {
         const modifier = editor.modifier();
         if (action === "edit" && modifier.length < 1) {
-            console.log(modifier);
             return false;
         }
     })
@@ -368,50 +458,15 @@ function sendExtraFormDataAndValidate() {
     })
 }
 
-
-function showHideChild() {
-    // Array to track the ids of the details displayed rows
-    const detailRows = [];
-
-    $('#baseTable tbody').on('click', 'tr td.details-control', function () {
-        const tr = $(this).closest('tr');
-        const row = myTable.row(tr);
-        const idx = $.inArray(tr.attr('id'), detailRows);
-
-        if (row.child.isShown()) {
-            tr.removeClass('details');
-            row.child.hide();
-
-            // Remove from the 'open' array
-            detailRows.splice(idx, 1);
-        } else {
-            tr.addClass('details');
-            row.child(format(row.data())).show();
-
-            // Add to the 'open' array
-            if (idx === -1) {
-                detailRows.push(tr.attr('id'));
-            }
-        }
-    });
-
-    // On each draw, loop over the `detailRows` array and show any child rows
-    myTable.on('draw', function () {
-        $.each(detailRows, function (i, id) {
-            $('#' + id + ' td.details-control').trigger('click');
-        });
-    });
-}
-
-function format(d) {
+function generatePeopleTable(data) {
     let innerTable = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px; width: 80%">';
     innerTable += '<thead><tr>';
     innerTable += '<th>القائم به</th><th>الموقف</th>';
     innerTable += '</tr></head><tbody>';
-    for (var i = 0; i < d.people.length; i++) {
+    for (let i = 0; i < data.length; i++) {
         innerTable += '<tr>';
-        innerTable += ('<td>' + d.people[i].name + '</td>');
-        innerTable += ('<td>' + d.people[i].action_taken + '</td>');
+        innerTable += ('<td>' + data[i].name + '</td>');
+        innerTable += ('<td>' + data[i].action_taken + '</td>');
         innerTable += '</tr>';
     }
     innerTable += '</tbody></table>';
