@@ -1,8 +1,6 @@
 let editor; // use a global for the submit and return data rendering in the examples
 let myTable;
 const maxTextLength = ($(window).width() < 991.98) ? 50 : 180;
-console.log($(window).width());
-console.log(maxTextLength);
 let cols = [
     {
         width: "5%",
@@ -123,6 +121,11 @@ $(document).ready(function () {
     editor = new $.fn.dataTable.Editor({
         table: "#baseTable",
         template: '#customForm',
+        formOptions: {
+            main: {
+                onEsc: false
+            }
+        },
         ajax: {
             create: {
                 type: 'POST',
@@ -153,6 +156,19 @@ $(document).ready(function () {
                 disabled: isAdmin,
                 readonly: isAdmin
             }
+        }, {
+            label: "ملفات:",
+            ajax: '/tasks/validate-image',
+            name: "files[].id",
+            type: "uploadMany",
+            display: function (file_id) {
+                return '<img src="' + editor.file('files', file_id).web_path + '"/>';
+            },
+            noFileText: 'لا يوجد ملف',
+            fileReadText: 'يتم الرفع',
+            uploadText: 'رفع ملف',
+            clearText: 'مسح الاختيار',
+            dragDropText: 'اسحب الملف الى هنا ليتم الرفع'
         }],
         i18n: {
             create: {
@@ -218,6 +234,11 @@ $(document).ready(function () {
         },
         initComplete: configureTableForNonAdmins,
         createdRow: function (row, data, dataIndex) {
+            let filesIDs = [];
+            for (let i = 0; i < data.files.length; i++) {
+                filesIDs.push({"id": data.files[i].ID.toString()})
+            }
+            data.files = filesIDs;
             if (isAdmin && !data.seen) {
                 $(row).children().first().addClass('unseen');
             }
@@ -253,45 +274,9 @@ $(document).ready(function () {
             selector: 'td:nth-child(2)'
         },     // enable single row selection
         buttons: [
-            {
-                extend: "create",
-                editor: editor,
-                name: "createButton",
-                formButtons: [
-                    "اضافه تكليف",
-                    {
-                        text: 'الرجوع', action: function () {
-                            this.close();
-                        }
-                    }
-                ]
-            },
-            {
-                extend: "edit",
-                editor: editor,
-                name: "editButton",
-                formButtons: [
-                    "تعديل تكليف",
-                    {
-                        text: 'الرجوع', action: function () {
-                            this.close();
-                        }
-                    }
-                ]
-            },
-            {
-                extend: "remove",
-                editor: editor,
-                name: "removeButton",
-                formButtons: [
-                    "مسح تكليف",
-                    {
-                        text: 'الرجوع', action: function () {
-                            this.close();
-                        }
-                    }
-                ]
-            }
+            addDataTableButton("create", "اضافه تكليف"),
+            addDataTableButton("edit", "تعديل تكليف"),
+            addDataTableButton("remove", "مسح تكليف")
         ]
     });
 
@@ -301,8 +286,32 @@ $(document).ready(function () {
     openModalOnDoubleClick();
     redrawTableOnModalClose();
     preventModalOpeningIfNoRecordsAreFound();
+    changeFileUploadTextAndOpenStateOnChange();
 });
 
+function addDataTableButton(baseButton, text) {
+    return {
+        extend: baseButton,
+        editor: editor,
+        name: baseButton + "Button",
+        formButtons: [
+            {
+                text: text,
+                className: 'btn-primary mr-3',
+                action: function () {
+                    this.submit();
+                }
+            },
+            {
+                text: 'الرجوع',
+                className: 'btn-secondary',
+                action: function () {
+                    this.close();
+                }
+            }
+        ]
+    }
+}
 
 function preventModalOpeningIfNoRecordsAreFound() {
     editor.on('preOpen', function (e, type, action) {
@@ -310,7 +319,7 @@ function preventModalOpeningIfNoRecordsAreFound() {
         if (action === "edit" && modifier.length < 1) {
             return false;
         }
-    })
+    });
 }
 
 function redrawTableOnModalClose() {
@@ -336,7 +345,7 @@ function openModalOnDoubleClick() {
 }
 
 function showPeopleActions() {
-    editor.on('open', function (e, type) {
+    editor.on('open', function (e, type, action) {
         const modifier = editor.modifier();
         let $selectedUsers = $('#selectedUsers');
         if (isAdmin) {
@@ -422,7 +431,8 @@ function sendExtraFormDataAndValidate() {
 
 
         if (description.val().length === 0) {
-            description.error('يجب ان يوجد تكليف')
+            description.error('يجب ان يوجد تكليف');
+            editor.error("حدث خطأ, برجاء مراجعه البيانات");
         }
 
         let numberOfPeople = $('#czContainer_czMore_txtCount').val();
@@ -455,6 +465,8 @@ function sendExtraFormDataAndValidate() {
             data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
             data.data["people_finalResponse_" + i] = $('#finalResponse_' + (i + 1) + '_repeat').is(':checked');
         }
+
+
     })
 }
 
@@ -471,4 +483,29 @@ function generatePeopleTable(data) {
     }
     innerTable += '</tbody></table>';
     return innerTable;
+}
+
+function changeFileUploadTextAndOpenStateOnChange() {
+    editor.on('open', function () {
+        let $inputFile = $('#inputFile');
+        $inputFile.val('');
+        $inputFile.trigger('change');
+
+        $inputFile.on('change', function () {
+            //get the file name
+            let fileName;
+
+            if ($(this)[0].files.length > 1) {
+                fileName = "تم اختيار " + $(this)[0].files.length + " ملف";
+            } else {
+                fileName = $(this).val().replace('C:\\fakepath\\', " ");
+                if (fileName === '')
+                    fileName = 'رفع صوره';
+            }
+
+            //replace the "Choose a file" label
+            $('.custom-file-label').html(fileName);
+
+        });
+    });
 }

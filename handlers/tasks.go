@@ -4,6 +4,7 @@ import (
 	"../models"
 	"fmt"
 	"github.com/labstack/echo"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -19,6 +20,8 @@ func (db *MyDB) AddTask(c echo.Context) error {
 		Description: c.FormValue("data[description]"), // gets the value of the description from the form that was submitted
 	}
 	db.GormDB.Create(&taskToSave) // saves the task to the database
+
+	linkFiles(db, &c, taskToSave.ID)
 
 	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]")) // gets the value of the total users that were assigned to finish that task
 	var users []uint
@@ -83,6 +86,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		}
 	}
 
+	linkFiles(db, &c, task.ID)
 	// only the admin has the privileges to assign or delete users to the task
 	if isAdmin {
 		totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]")) // gets the number of the totalUsers assigned to the task
@@ -188,21 +192,68 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	maxDateSearch := q["max_date"][0]        // the value of max_date search
 	retrieveType := q["retrieve"][0]         // the value of the retrieve type
 	userID, admin := getUserStatus(&c)       // gets the value of userID and admin
-	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter := models.GetAllTasks(db.GormDB, start, length,
+	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files := models.GetAllTasks(db.GormDB, start, length,
 		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, admin, userID)
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,
 		RecordsFiltered: totalNumberOfRowsAfterFilter,
 		Data:            tasks,
+		Files:           files,
 	}
+
 	return c.JSONPretty(http.StatusOK, dt, " ")
+}
+
+func (db *MyDB) validateImage(c echo.Context) error {
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		fmt.Println("Error Retrieving the File")
+		fmt.Println(err)
+	}
+	fileGiven := form.File["upload"][0]
+	file := models.File{}
+
+	// Source
+	src, err := fileGiven.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	reader, _ := fileGiven.Open()
+	file.Bytes, _ = ioutil.ReadAll(reader)
+
+	db.GormDB.Create(&file)
+
+	files := make([]models.File, 1)
+	files[0] = file
+	fileOutput := models.GenerateFilesObjectJson(files)
+
+	return c.JSONPretty(http.StatusOK, fileOutput, " ")
+}
+
+func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
+	context := *c
+	numberOfFiles, _ := strconv.Atoi(context.FormValue("data[files-many-count]"))
+	var filesIDs []int
+	for i := 0; i < numberOfFiles; i++ {
+		fileID, _ := strconv.Atoi(context.FormValue(fmt.Sprintf("data[files][%d][id]", i)))
+		filesIDs = append(filesIDs, fileID)
+
+	}
+	if filesIDs == nil {
+		filesIDs = append(filesIDs, 0)
+	}
+	db.GormDB.Table("files").Where("id IN (?)", filesIDs).UpdateColumn("task_id", taskID)
+	db.GormDB.Delete(models.File{}, "task_id = ? AND id NOT IN (?)", taskID, filesIDs)
 }
 
 // struct to return the datatable rows in the correct format
 type dtOutput struct {
-	Draw            int           `json:"draw"`
-	RecordsTotal    int           `json:"recordsTotal"`
-	RecordsFiltered int           `json:"recordsFiltered"`
-	Data            []models.Task `json:"data"`
+	Draw            int                    `json:"draw"`
+	RecordsTotal    int                    `json:"recordsTotal"`
+	RecordsFiltered int                    `json:"recordsFiltered"`
+	Data            []models.Task          `json:"data"`
+	Files           map[string]interface{} `json:"files"`
 }

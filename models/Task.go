@@ -12,6 +12,7 @@ type Task struct {
 	Users       []*UserTask    `gorm:"PRELOAD:false" json:"users"`
 	People      []Person       `gorm:"PRELOAD:false" json:"people"`
 	FinalAction sql.NullString `json:"final_action" gorm:"default: null;type:nvarchar(1024)"`
+	Files       []File         `json:"files" gorm:"PRELOAD:false"`
 	Seen        bool           `gorm:"default:1;not null" json:"seen"`
 	Hash        string
 }
@@ -32,7 +33,8 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 
 // this function takes the search parameters (datatables parameters) and return the corresponding data
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
-	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string, admin bool, userID uint) ([]Task, int, int) {
+	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
+	admin bool, userID uint) ([]Task, int, int, map[string]interface{}) {
 
 	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
 	var tasks []Task
@@ -70,6 +72,10 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		db = db.Where("tasks.id IN (?)", ids)
 	}
 	db = db.Preload("Users").Preload("People")
+	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
+		//return db.Table("files").Select("id")
+		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash")
+	})
 	if descriptionSearch != "" { // if the end user entered data in the description search
 		descriptionSearch = "%" + descriptionSearch + "%" // search by the entered value with % before and after to match any
 		db = db.Where("description LIKE ?", descriptionSearch)
@@ -105,5 +111,14 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	}
 	// adds the offset and limit to apply pagination
 	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
-	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
+
+	files := make([]File, 0)
+	for _, task := range tasks {
+		files = append(files, task.Files...)
+	}
+	fileOutput := map[string]interface{}{
+		"files": GenerateNumberObjectJson(files),
+	}
+
+	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
 }

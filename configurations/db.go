@@ -12,6 +12,7 @@ func InitDB() (*gorm.DB, error) {
 		db.LogMode(true)                               // enable logMode to debug the generated SQL
 		db.AutoMigrate(&models.User{}, &models.Task{}) // migrate the required tables (structs)
 		db.AutoMigrate(&models.UserTask{}, &models.Person{}, &models.Subscription{})
+		db.AutoMigrate(&models.File{}).AddForeignKey("task_id", "tasks(id)", "CASCADE", "CASCADE")
 		db = db.Set("gorm:auto_preload", true)
 	}
 	return db, err
