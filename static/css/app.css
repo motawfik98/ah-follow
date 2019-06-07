@@ -49,3 +49,9 @@ html {
     white-space: normal;
     width: 100%;
 }
+
+.btn.remove {
+    color: #fff;
+    background-color: #d9534f;
+    border-color: #d43f3a;
+}

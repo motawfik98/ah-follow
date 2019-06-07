@@ -74,7 +74,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	db = db.Preload("Users").Preload("People")
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		//return db.Table("files").Select("id")
-		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash")
+		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
 	})
 	if descriptionSearch != "" { // if the end user entered data in the description search
 		descriptionSearch = "%" + descriptionSearch + "%" // search by the entered value with % before and after to match any

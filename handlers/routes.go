@@ -25,7 +25,8 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	tasks.POST("/edit", db.EditTask)
 	tasks.POST("/person/seen", db.ChangePersonSeen)
 	tasks.GET("/getData", db.GetTasks)
-	tasks.POST("/validate-image", db.validateImage)
+	tasks.POST("/validate-image", db.validateFile)
+	tasks.GET("/file/:hash", db.showFile)
 
 	notifications := e.Group("/notifications")
 	notifications.POST("/register", db.registerClientToNotify)

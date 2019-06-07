@@ -162,13 +162,16 @@ $(document).ready(function () {
             name: "files[].id",
             type: "uploadMany",
             display: function (file_id) {
-                return '<img src="' + editor.file('files', file_id).web_path + '"/>';
+                let file = editor.file('files', file_id);
+                return '<a class="file-display mx-5" target="_blank" href=' + file.web_path + '>'
+                    + file.created_at + '</a>';
             },
             noFileText: 'لا يوجد ملف',
             fileReadText: 'يتم الرفع',
             uploadText: 'رفع ملف',
             clearText: 'مسح الاختيار',
-            dragDropText: 'اسحب الملف الى هنا ليتم الرفع'
+            dragDropText: 'اسحب الملف الى هنا ليتم الرفع',
+            processingText: 'يتم الرفع'
         }],
         i18n: {
             create: {
@@ -251,7 +254,7 @@ $(document).ready(function () {
         language: {
             url: '/source-codes/languages/datatables.language.json'
         },
-        order: [[3, 'desc']],
+        order: [[4, 'desc']],
         rowId: "ID",
         processing: true,
         serverSide: true,
@@ -286,7 +289,6 @@ $(document).ready(function () {
     openModalOnDoubleClick();
     redrawTableOnModalClose();
     preventModalOpeningIfNoRecordsAreFound();
-    changeFileUploadTextAndOpenStateOnChange();
 });
 
 function addDataTableButton(baseButton, text) {
@@ -485,27 +487,3 @@ function generatePeopleTable(data) {
     return innerTable;
 }
 
-function changeFileUploadTextAndOpenStateOnChange() {
-    editor.on('open', function () {
-        let $inputFile = $('#inputFile');
-        $inputFile.val('');
-        $inputFile.trigger('change');
-
-        $inputFile.on('change', function () {
-            //get the file name
-            let fileName;
-
-            if ($(this)[0].files.length > 1) {
-                fileName = "تم اختيار " + $(this)[0].files.length + " ملف";
-            } else {
-                fileName = $(this).val().replace('C:\\fakepath\\', " ");
-                if (fileName === '')
-                    fileName = 'رفع صوره';
-            }
-
-            //replace the "Choose a file" label
-            $('.custom-file-label').html(fileName);
-
-        });
-    });
-}
