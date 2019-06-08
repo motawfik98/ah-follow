@@ -397,7 +397,7 @@ function showPeopleActions() {
                 addPersonAndHisActionToModal(i, data);
             }
 
-            $markAsSeen.on('click', function () {
+            $('#markAsSeen').on('click', function () {
                 if (isAdmin)
                     changeTaskSeenProperty(data.ID, false);
                 else
