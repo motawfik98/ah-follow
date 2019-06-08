@@ -56,13 +56,21 @@ func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
 }
 
 func (db *MyDB) showFile(c echo.Context) error {
+	userID, isAdmin := getUserStatus(&c)
 	hash := c.Param("hash")
 	var file models.File
+	var fileTask models.Task
 	db.GormDB.Find(&file, "hash = ?", hash)
-	c.Response().Header().Set("Content-Type", file.ContentType)
-	c.Response().Header().Set("content-disposition", "inline;filename="+file.Hash)
-	c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")
-	_, _ = c.Response().Write(file.Bytes)
-	c.Response().Flush()
-	return nil
+	db.GormDB.Preload("Users").Find(&fileTask, file.TaskID)
+	for _, user := range fileTask.Users {
+		if user.UserID == userID || isAdmin {
+			c.Response().Header().Set("Content-Type", file.ContentType)
+			c.Response().Header().Set("content-disposition", "inline;filename="+file.Hash)
+			c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")
+			_, _ = c.Response().Write(file.Bytes)
+			c.Response().Flush()
+			return nil
+		}
+	}
+	return redirectWithFlashMessage("failure", "لم نتمكن من ايجاد الملف المطلوب", "/", &c)
 }
