@@ -348,18 +348,34 @@ function openModalOnDoubleClick() {
 
 function showPeopleActions() {
     editor.on('open', function (e, type, action) {
+        let $markAsSeen = $('#markAsSeen');
+        if (action === 'edit') {
+            if ($markAsSeen.length < 1) {
+                let markTaskAsUnseen = '<button class="btn btn-link mr-5" id="markAsSeen">اعتباره جديد</button>';
+                $(markTaskAsUnseen).insertBefore('.DTE_Header>.close');
+            } else {
+                $markAsSeen.removeClass("d-none");
+            }
+        } else {
+            $markAsSeen.addClass("d-none");
+        }
         const modifier = editor.modifier();
         let $selectedUsers = $('#selectedUsers');
         if (isAdmin) {
             if (modifier) {
-                markTaskAsSeen(modifier);
+                const data = myTable.row(modifier).data();
+                if (!data.seen) {
+                    changeTaskSeenProperty(data.ID, true);
+                }
             }
         } else {
             $selectedUsers.attr('disabled', true);
             if (modifier) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.users.length; i++) {
-                    markPersonTaskAsSeen(data, i);
+                    if (data.users[i].user_id === userID && !data.users[i].seen) {
+                        changePersonTaskSeenProperty(data.ID, data.users[i].user_id, true);
+                    }
                 }
             }
         }
@@ -377,10 +393,17 @@ function showPeopleActions() {
             $selectedUsers.val(selectedPeopleIDs);
             $selectedUsers.trigger('change'); // Notify any JS components that the value changed
 
-            let i;
-            for (i = 1; i <= data.people.length; i++) {
+            for (let i = 1; i <= data.people.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
+
+            $markAsSeen.on('click', function () {
+                if (isAdmin)
+                    changeTaskSeenProperty(data.ID, false);
+                else
+                    changePersonTaskSeenProperty(data.ID, userID, false);
+
+            });
         }
     });
 }
@@ -393,26 +416,20 @@ function addPersonAndHisActionToModal(i, data) {
     $('#finalResponse_' + i + '_repeat').prop('checked', data.people[i - 1].final_response);
 }
 
-function markTaskAsSeen(modifier) {
-    const data = myTable.row(modifier).data();
-    if (!data.seen) {
-        $.post("/tasks/seen", {
-            seen: true,
-            task_id: data.ID
-        });
-        $('tr#' + data.ID).removeClass('unseen')
-    }
+function changeTaskSeenProperty(taskID, seenProperty) {
+    $.post("/tasks/seen", {
+        seen: seenProperty,
+        task_id: taskID
+    });
+
 }
 
-function markPersonTaskAsSeen(data, i) {
-    if (data.users[i].user_id === userID && !data.users[i].seen) {
-        $.post("/tasks/person/seen", {
-            seen: true,
-            task_id: data.ID,
-            user_id: data.users[i].user_id
-        });
-        $('tr#' + data.ID).removeClass('unseen')
-    }
+function changePersonTaskSeenProperty(taskID, userID, seenProperty) {
+    $.post("/tasks/person/seen", {
+        seen: seenProperty,
+        task_id: taskID,
+        user_id: userID
+    });
 }
 
 
