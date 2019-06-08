@@ -62,15 +62,23 @@ func (db *MyDB) showFile(c echo.Context) error {
 	var fileTask models.Task
 	db.GormDB.Find(&file, "hash = ?", hash)
 	db.GormDB.Preload("Users").Find(&fileTask, file.TaskID)
+	if file.TaskID == 0 || isAdmin {
+		return displayFile(&c, file)
+	}
 	for _, user := range fileTask.Users {
-		if user.UserID == userID || isAdmin {
-			c.Response().Header().Set("Content-Type", file.ContentType)
-			c.Response().Header().Set("content-disposition", "inline;filename="+file.Hash)
-			c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")
-			_, _ = c.Response().Write(file.Bytes)
-			c.Response().Flush()
-			return nil
+		if user.UserID == userID {
+			return displayFile(&c, file)
 		}
 	}
 	return redirectWithFlashMessage("failure", "لم نتمكن من ايجاد الملف المطلوب", "/", &c)
+}
+
+func displayFile(context *echo.Context, file models.File) error {
+	c := *context
+	c.Response().Header().Set("Content-Type", file.ContentType)
+	c.Response().Header().Set("content-disposition", "inline;filename="+file.Hash)
+	c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")
+	_, _ = c.Response().Write(file.Bytes)
+	c.Response().Flush()
+	return nil
 }
