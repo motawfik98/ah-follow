@@ -37,9 +37,9 @@
                         <div class="form-group">
                             <label for="adminPassword">كلمه السر الخاصه بالوزير</label>
                             <input type="password" name="adminPassword" class="form-control" id="adminPassword"
-                                   aria-describedby="adminPasswordHelp" placeholder="كلمه السر الخاصه بالوزير">
+                                   aria-describedby="adminPasswordHelp" placeholder="{{.adminPasswordPlaceholder}}">
                             <small id="adminPasswordHelp" class="form-text text-muted">
-                                هذا الحقل خاص بالوزير, ولا يمكن ان تضيف مستخدم جديد الا بالرجوع اليه
+                                {{.adminPasswordHelp}}
                             </small>
 
                         </div>

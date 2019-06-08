@@ -55,12 +55,14 @@ func (db *MyDB) performLogin(c echo.Context) error {
 func showSignUpPage(c echo.Context) error {
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
 	return c.Render(http.StatusOK, "signup.html", echo.Map{
-		"status":     status,              // pass the status of the flash message
-		"message":    message,             // pass the message
-		"title":      "مستخدم جديد",       // the title of the page
-		"hideNavBar": true,                // boolean to indicate weather or not the NavBar should be displayed
-		"buttonText": "تسجيل مستخدم جديد", // the action button text the should be displayed to the user
-		"formAction": "/signup",           // the URL that the form should be submitted to
+		"status":                   status,                                                                 // pass the status of the flash message
+		"message":                  message,                                                                // pass the message
+		"title":                    "مستخدم جديد",                                                          // the title of the page
+		"hideNavBar":               true,                                                                   // boolean to indicate weather or not the NavBar should be displayed
+		"buttonText":               "تسجيل مستخدم جديد",                                                    // the action button text the should be displayed to the user
+		"formAction":               "/signup",                                                              // the URL that the form should be submitted to
+		"adminPasswordPlaceholder": "كلمه السر الخاصه بالوزير",                                             // string that should be shown in the admin password input placeholder
+		"adminPasswordHelp":        "هذا الحقل خاص بالوزير, ولا يمكن ان تضيف مستخدم جديد الا بالرجوع اليه", // some helper text for the admin password field
 	})
 }
 
@@ -105,13 +107,15 @@ func (db *MyDB) showResetPasswordUpPage(c echo.Context) error {
 	status, message := getFlashMessages(&c)        // gets the flash message and status if there was any
 	usernames := models.GetAllUsernames(db.GormDB) // gets all the usernames that are in the database
 	return c.Render(http.StatusOK, "signup.html", echo.Map{
-		"status":     status,            // pass the status of the flash message
-		"message":    message,           // pass the message
-		"title":      "تغيير كلمه السر", // the title of the page
-		"hideNavBar": true,              // boolean to indicate weather or not the NavBar should be displayed
-		"usernames":  usernames,         // pass the usernames array to display to the user
-		"buttonText": "تغيير كلمه السر", // the action button text the should be displayed to the user
-		"formAction": "/reset-password", // the URL that the form should be submitted to
+		"status":                   status,                                                                        // pass the status of the flash message
+		"message":                  message,                                                                       // pass the message
+		"title":                    "تغيير كلمه السر",                                                             // the title of the page
+		"hideNavBar":               true,                                                                          // boolean to indicate weather or not the NavBar should be displayed
+		"usernames":                usernames,                                                                     // pass the usernames array to display to the user
+		"buttonText":               "تغيير كلمه السر",                                                             // the action button text the should be displayed to the user
+		"formAction":               "/reset-password",                                                             // the URL that the form should be submitted to
+		"adminPasswordPlaceholder": "كلمه السر الخاصه بالوزير (او القديمه)",                                       // string that should be shown in the admin password input placeholder
+		"adminPasswordHelp":        "يجب ادخال كلمه السر الخاصه بالوزير (او كلمه السر القديمه) لتتمكن من تغييرها", // some helper text for the admin password field
 	})
 }
 
@@ -124,19 +128,20 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 		// if not, redirect to /signup with failure flash message
 		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", "/reset-password", &c)
 	}
-	var admin models.User
+	var admin, user models.User
 	db.GormDB.First(&admin, 1)
+	db.GormDB.Where("username = ?", username).First(&user) // gets the user where the username is equal to the entered username by the end user
 	administratorPassword := os.Getenv("administrator_password")
-	if !(adminPassword == administratorPassword || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil) {
+	if !(adminPassword == administratorPassword ||
+		bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil ||
+		bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(adminPassword)) == nil) {
 		return redirectWithFlashMessage("failure", "كلمه السر الخاصه ليست صحيحه", "/reset-password", &c)
 	}
 	// all conditions are met and we're ready to change the user's password
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10) // hash the password that the user entered
-	user := models.User{}
-	db.GormDB.Where("username = ?", username).First(&user) // gets the user where the username is equal to the entered username by the end user
-	user.Password = string(hashedPassword)                 // sets the password to the hashed password
-	db.GormDB.Save(&user)                                  // update the user in the database
-	err := addSession(&c, user.ID, user.Admin)             // add a cookie to the browser to log the user in
+	user.Password = string(hashedPassword)                                 // sets the password to the hashed password
+	db.GormDB.Save(&user)                                                  // update the user in the database
+	err := addSession(&c, user.ID, user.Admin)                             // add a cookie to the browser to log the user in
 	if err != nil {
 		return err
 	}
