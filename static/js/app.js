@@ -289,6 +289,9 @@ $(document).ready(function () {
     openModalOnDoubleClick();
     redrawTableOnModalClose();
     preventModalOpeningIfNoRecordsAreFound();
+    $('#btnRefresh').on('click', function () {
+        myTable.draw();
+    });
 });
 
 function addDataTableButton(baseButton, text) {

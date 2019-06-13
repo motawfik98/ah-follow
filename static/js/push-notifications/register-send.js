@@ -1,4 +1,14 @@
-navigator.serviceWorker.register('service-worker.js');
+// CODELAB: Register service worker.
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+            .then((reg) => {
+                console.log('Service worker application registered.', reg);
+            });
+    });
+}
+
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

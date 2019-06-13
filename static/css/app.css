@@ -55,3 +55,25 @@ html {
     background-color: #d9534f;
     border-color: #d43f3a;
 }
+
+.navbar button {
+    border: none;
+    cursor: pointer;
+    height: 24px;
+    margin-right: 8px;
+    margin-left: 8px;
+    opacity: 0.54;
+    outline: none;
+    overflow: hidden;
+    text-indent: -30000px;
+    transition: opacity 0.333s cubic-bezier(0, 0, 0.21, 1);
+    width: 24px;
+}
+
+.navbar #btnRefresh {
+    background: url(../PWA/images/refresh.svg) center center no-repeat;
+}
+
+.navbar #btnInstall {
+    background: url(../PWA/images/install.svg) center center no-repeat;
+}
