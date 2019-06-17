@@ -145,16 +145,16 @@ $(document).ready(function () {
             name: "description",
             type: "textarea",
             attr: {
-                disabled: !isAdmin,
-                readonly: !isAdmin
+                disabled: classification !== 1,
+                readonly: classification !== 1
             }
         }, {
             label: "الاجراء النهائي:",
             name: "final_action",
             type: "textarea",
             attr: {
-                disabled: isAdmin,
-                readonly: isAdmin
+                disabled: classification === 1,
+                readonly: classification === 1
             }
         }, {
             label: "ملفات:",
@@ -242,7 +242,7 @@ $(document).ready(function () {
                 filesIDs.push({"id": data.files[i].ID.toString()})
             }
             data.files = filesIDs;
-            if (isAdmin && !data.seen) {
+            if (classification === 1 && !data.seen) {
                 $(row).children().first().addClass('unseen');
             }
             for (let i = 0; i < data.users.length; i++) {
@@ -335,7 +335,7 @@ function redrawTableOnModalClose() {
 
 
 function configureTableForNonAdmins() {
-    if (!isAdmin) {
+    if (classification !== 1) {
         myTable.buttons('createButton:name, removeButton:name').remove();
     }
 }
@@ -364,7 +364,7 @@ function showPeopleActions() {
         }
         const modifier = editor.modifier();
         let $selectedUsers = $('#selectedUsers');
-        if (isAdmin) {
+        if (classification === 1) {
             if (modifier) {
                 const data = myTable.row(modifier).data();
                 if (!data.seen) {
@@ -401,7 +401,7 @@ function showPeopleActions() {
             }
 
             $('#markAsSeen').on('click', function () {
-                if (isAdmin)
+                if (classification === 1)
                     changeTaskSeenProperty(data.ID, false);
                 else
                     changePersonTaskSeenProperty(data.ID, userID, false);

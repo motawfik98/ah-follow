@@ -40,8 +40,8 @@ func ensureLoggedIn(next echo.HandlerFunc) echo.HandlerFunc {
 // this function ensures that the request is coming from an admin user
 func ensureAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		_, isAdmin := getUserStatus(&c) // gets the isAdmin value from the session that was added
-		if isAdmin == true {
+		_, classification := getUserStatus(&c) // gets the classification value from the session that was added
+		if classification == 1 {
 			return next(c) // the user is an admin, continue the request
 		}
 		sess := getSession("flash", &c)                                    // gets the session with value `flash`
@@ -63,10 +63,10 @@ func getSession(sessionName string, c *echo.Context) *sessions.Session {
 	return sess
 }
 
-// this function returns the user_id and the isAdmin values that were stored in the session cookie
-func getUserStatus(c *echo.Context) (uint, bool) {
+// this function returns the user_id and the classification values that were stored in the session cookie
+func getUserStatus(c *echo.Context) (uint, int) {
 	sess := getSession("authorization", c)
-	return sess.Values["user_id"].(uint), sess.Values["isAdmin"].(bool)
+	return sess.Values["user_id"].(uint), sess.Values["classification"].(int)
 }
 
 // this function deletes the session cookie from the browser (useful in logout)

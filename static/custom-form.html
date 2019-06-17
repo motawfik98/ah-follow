@@ -1,7 +1,7 @@
 {{define "custom-form"}}
 
     <script>
-        let isAdmin = {{.admin}};
+        let classification = {{.classification}};
         let userID = {{.userID}};
     </script>
 
@@ -17,7 +17,7 @@
             <legend>المتابع</legend>
             <select class="form-control js-select2" multiple="multiple" id="selectedUsers">
                 <option></option>
-                {{range .users}}
+                {{range .followingUsers}}
                     <option value="{{.ID}}">{{.Username}}</option>
                 {{end}}
             </select>

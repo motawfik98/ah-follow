@@ -34,12 +34,12 @@ func (task *Task) DeleteChildren(db *gorm.DB) {
 // this function takes the search parameters (datatables parameters) and return the corresponding data
 func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
-	admin bool, userID uint) ([]Task, int, int, map[string]interface{}) {
+	classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
 
 	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
 	var tasks []Task
 	var totalNumberOfRowsInDatabase int
-	if !admin {
+	if classification == 2 {
 		// join the user_tasks table to get only the tasks that were assigned to the logged in user
 		db = db.Table("tasks").Joins("JOIN user_tasks ON user_tasks.task_id = tasks.id")
 		db = db.Where("user_tasks.user_id = ?", userID)
@@ -50,13 +50,13 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	} else if retrieveType == "nonReplied" { // if the end user searches by the tasks that DOES NOT HAVE final action
 		db = db.Where("final_action IS NULL")
 	} else if retrieveType == "unseen" { // if the end user searches by the tasks that HE HAS NOT SEEN
-		if admin { // if the end user was an admin
+		if classification == 1 { // if the end user was an admin
 			db = db.Where("seen = 0 AND final_action IS NOT NULL") // get all the tasks that has a `final_action` and he has not seen yes
 		} else { // if not
 			db = db.Where("user_tasks.seen = 0") // get all the tasks that he has not seen weather or not it has a `final_action`
 		}
 	} else if retrieveType == "seen" { // if the end user searches by the tasks that HE HAS SEEN BEFORE
-		if admin { // if the end user was an admin
+		if classification == 1 { // if the end user was an admin
 			db = db.Where("seen = 1 AND final_action IS NOT NULL") // get all the tasks that has a `final_action` and he has not seen yes
 		} else { // if not
 			db = db.Where("user_tasks.seen = 1") // get all the tasks that he has not seen weather or not it has a `final_action`
@@ -103,7 +103,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	db.Find(&tasks).Count(&totalNumberOfRowsAfterFilter)
 	if sortedColumn != "created_at" { // if the user doesn't sort by the created_at column
 		// order by the unseen first then the seen tasks
-		if admin {
+		if classification == 1 {
 			db = db.Order("tasks.seen")
 		} else {
 			db = db.Order("user_tasks.seen")

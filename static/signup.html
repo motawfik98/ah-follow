@@ -43,6 +43,17 @@
                             </small>
 
                         </div>
+                        {{if .isSignUp}}
+                            <div class="form-group">
+                                <label for="classification">التصنيف</label>
+                                <select class="form-control" id="classification" name="classification">
+                                    <option value="1">الوزير</option>
+                                    <option value="2">متابع</option>
+                                    <option value="3" selected>قائم به</option>
+
+                                </select>
+                            </div>
+                        {{end}}
                         <button type="submit" class="btn btn-primary">{{.buttonText}}</button>
                         <a href="/login">مسجل بالبرنامج ؟</a>
                     </form>

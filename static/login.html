@@ -9,11 +9,19 @@
                     <h4 class="card-title mb-4 mt-1">تسجيل دخول</h4>
                     <form action="/login" method="post">
                         <div class="form-group">
+                            <label for="classification">التصنيف</label>
+                            <select class="form-control" id="classification" name="classification">
+                                <option value="1">الوزير</option>
+                                <option value="2">متابع</option>
+                                <option value="3">قائم به</option>
+                            </select>
+                        </div> <!-- form-group// -->
+                        <div class="form-group">
                             <label for="username">اسم المستخدم</label>
                             <select class="form-control js-select2" id="username" name="username">
                                 <option></option>
-                                {{range .usernames}}
-                                    <option value="{{.}}">{{.}}</option>
+                                {{range .users}}
+                                    <option value="{{.Username}}">{{.Username}}</option>
                                 {{end}}
                             </select>
                         </div> <!-- form-group// -->
@@ -40,6 +48,27 @@
 
         </aside> <!-- col.// -->
     </div> <!-- row.// -->
+
+    <script>
+        let users = {{.users}}
+            $(document).ready(function () {
+                changeSelectElements();
+                $("#classification").on('change', function () {
+                    changeSelectElements();
+                });
+            });
+
+        function changeSelectElements() {
+            let $username = $('#username');
+            $username.empty();
+            let classificationValue = $('#classification').val();
+            users.forEach(function (user) {
+                if (user.classification.toString() === classificationValue)
+                    $username.append(new Option(user.username, user.username, false, false))
+            });
+            $username.trigger('change.select2')
+        }
+    </script>
 
     {{template "footer".}}
 

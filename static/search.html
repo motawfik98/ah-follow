@@ -35,7 +35,7 @@
     <div class="row my-2 d-block">
         <fieldset class="border p-2 d-md-inline">
             <legend style="font-size:16px; height:5px">
-                {{if .admin}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
+                {{if eq .classification 1}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
             </legend>
 
             <div class="form-check form-check-inline">
@@ -50,7 +50,7 @@
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
-                       {{if .admin}}value="replied" {{else}}value="all"{{end}}>
+                       {{if eq .classification 1}}value="replied" {{else}}value="all"{{end}}>
                 <label class="form-check-label" for="inlineRadio2">الكل</label>
             </div>
         </fieldset>
@@ -58,9 +58,9 @@
         <fieldset class="border p-2 d-md-inline ml-md-5">
             <div class="form-check form-check-inline">
                 <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
-                       {{if .admin}}value="all" {{else}}value="notRepliedByAll"{{end}}>
+                       {{if eq .classification 1}}value="all" {{else}}value="notRepliedByAll"{{end}}>
                 <label class="form-check-label" for="inlineRadio1">
-                    {{if .admin}}استرجاع الكل{{else}}لم يرد كل القائمين به{{end}}
+                    {{if eq .classification 1}}استرجاع الكل{{else}}لم يرد كل القائمين به{{end}}
                 </label>
             </div>
             <div class="form-check form-check-inline">

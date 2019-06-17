@@ -56,13 +56,13 @@ func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
 }
 
 func (db *MyDB) showFile(c echo.Context) error {
-	userID, isAdmin := getUserStatus(&c)
+	userID, classification := getUserStatus(&c)
 	hash := c.Param("hash")
 	var file models.File
 	var fileTask models.Task
 	db.GormDB.Find(&file, "hash = ?", hash)
 	db.GormDB.Preload("Users").Find(&fileTask, file.TaskID)
-	if file.TaskID == 0 || isAdmin {
+	if file.TaskID == 0 || classification == 1 {
 		return displayFile(&c, file)
 	}
 	for _, user := range fileTask.Users {

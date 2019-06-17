@@ -6,30 +6,27 @@ import (
 
 type User struct {
 	gorm.Model
-	Username      string `form:"username" gorm:"unique_index"`
-	Password      string `form:"password"`
-	Hash          string
-	Order         int
-	Admin         bool            `gorm:"default:0;not null"`
-	Tasks         []*UserTask     `gorm:"PRELOAD:false"`
-	Subscriptions []*Subscription `gorm:"PRELOAD:false"`
+	Username       string `form:"username" gorm:"unique_index" json:"username"`
+	Password       string `form:"password"`
+	Hash           string
+	Order          int
+	Classification int             `gorm:"NOT NULL" json:"classification"`
+	Tasks          []*UserTask     `gorm:"PRELOAD:false"`
+	Subscriptions  []*Subscription `gorm:"PRELOAD:false"`
 }
 
 // this function updates the Hash and Admin column of the user after create
 func (user *User) AfterCreate(scope *gorm.Scope) error {
 	ID := int(user.ID)
-	admin := false
-	if ID == 1 {
-		admin = true
-	}
 	hash := generateHash(ID)
-	scope.DB().Model(user).Updates(User{Hash: hash, Order: ID, Admin: admin})
+	scope.DB().Model(user).Updates(User{Hash: hash, Order: ID})
 	return nil
 }
 
-// this function gets all the usernames that are in the database
-func GetAllUsernames(db *gorm.DB) []string {
-	var usernames []string
-	db.Table("users").Order("[order] ASC").Pluck("username", &usernames)
-	return usernames
+// this function gets all the users that are in the database
+func GetAllUsers(db *gorm.DB) []User {
+	var users []User
+	db.Table("users").Select("username, classification").
+		Order("[order] ASC").Scan(&users)
+	return users
 }

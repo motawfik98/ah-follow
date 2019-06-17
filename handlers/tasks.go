@@ -30,8 +30,8 @@ func (db *MyDB) AddTask(c echo.Context) error {
 		models.CreateUserTask(db.GormDB, taskToSave.ID, uint(uid)) // creates a UserTask to the database
 		users = append(users, uint(uid))                           // append the id to the users array
 	}
-	_, isAdmin := getUserStatus(&c)                      // gets the user status (id, admin)
-	sendNotification("تم اضافه تكليف جديد", isAdmin, db) // send notification (sent from `isAdmin` variable)
+	_, classification := getUserStatus(&c)                      // gets the user status (id, admin)
+	sendNotification("تم اضافه تكليف جديد", classification, db) // send notification (sent from `classification` variable)
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]")) // gets the total number of people that should be called to take an action
 	for i := 0; i < totalPeople; i++ {                               // loop for the number of the users to add them
@@ -53,7 +53,7 @@ func (db *MyDB) AddTask(c echo.Context) error {
 
 // this function edits an existing task
 func (db *MyDB) EditTask(c echo.Context) error {
-	_, isAdmin := getUserStatus(&c)                // gets the user status (id, admin)
+	_, classification := getUserStatus(&c)         // gets the user status (id, classification)
 	taskID, err := strconv.Atoi(c.FormValue("id")) // gets the ID of the requested task to edit
 	if err != nil {                                // if an error occurred parsing the ID, it may be malicious request
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -66,7 +66,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 
 	var task models.Task
 	db.GormDB.First(&task, taskID) // load the required task from the database using the ID
-	if isAdmin {                   // if the logged in user is an admin, then he could change the description of the task
+	if classification == 1 {       // if the logged in user is an admin, then he could change the description of the task
 		db.GormDB.Model(&task).UpdateColumn("description", description)
 	}
 	if finalAction != task.FinalAction.String { // if the final_action given by the user is different than that in the database
@@ -76,18 +76,18 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			// set the final_action to null and there's no need to mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
 			// send a notification to the admin informing him
-			sendNotification("تم الغاء الاجراء النهائي للتكليف", isAdmin, db)
+			sendNotification("تم الغاء الاجراء النهائي للتكليف", classification, db)
 		} else {
 			// change the final_action and mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
-			sendNotification("تم تعديل الاجراء النهائي للتكليف", isAdmin, db)
+			sendNotification("تم تعديل الاجراء النهائي للتكليف", classification, db)
 		}
 	}
 
 	linkFiles(db, &c, task.ID)
 	// only the admin has the privileges to assign or delete users to the task
-	if isAdmin {
+	if classification == 1 {
 		totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]")) // gets the number of the totalUsers assigned to the task
 		var ids []uint
 		for i := 0; i < totalUsers; i++ { // loop over the users to add them
@@ -105,7 +105,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			ids = []uint{0} // add a dummy id (0) to avoid unexpected behaviors
 		}
 		db.GormDB.Delete(models.UserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids) // delete any assigned user that his ID is not in the ids array
-		sendNotification("تم تعديل التكليف", isAdmin, db)                                      // send notifications to the users telling them that the task was edited
+		sendNotification("تم تعديل التكليف", classification, db)                               // send notifications to the users telling them that the task was edited
 	}
 
 	totalPeople, _ := strconv.Atoi(c.FormValue("data[totalPeople]")) // gets the total number of people that should be called to take an action
@@ -133,7 +133,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	if peopleIDs == nil { // checks if the ids array is empty
 		peopleIDs = []int{0} // add a dummy id (0) to avoid unexpected behaviors
 	}
-	if isAdmin { // since only the admin has the privileges to delete people
+	if classification == 1 { // since only the admin has the privileges to delete people
 		db.GormDB.Delete(models.Person{}, "task_id = ? AND id NOT IN (?)", taskID, peopleIDs)
 	}
 
@@ -185,14 +185,14 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	direction := q["order[0][dir]"][0]                              // ordering direction for this column
 	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber) // gets the name of the sorted column (not the numer)
 	sortedColumnName := q[sprintf][0]
-	descriptionSearch := q["description"][0] // the value of the description search
-	sentToSearch := q["sent_to"][0]          // the value of the sent_to search
-	minDateSearch := q["min_date"][0]        // the value of min_date search
-	maxDateSearch := q["max_date"][0]        // the value of max_date search
-	retrieveType := q["retrieve"][0]         // the value of the retrieve type
-	userID, admin := getUserStatus(&c)       // gets the value of userID and admin
+	descriptionSearch := q["description"][0]    // the value of the description search
+	sentToSearch := q["sent_to"][0]             // the value of the sent_to search
+	minDateSearch := q["min_date"][0]           // the value of min_date search
+	maxDateSearch := q["max_date"][0]           // the value of max_date search
+	retrieveType := q["retrieve"][0]            // the value of the retrieve type
+	userID, classification := getUserStatus(&c) // gets the value of userID and classification
 	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files := models.GetAllTasks(db.GormDB, start, length,
-		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, admin, userID)
+		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, classification, userID)
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,

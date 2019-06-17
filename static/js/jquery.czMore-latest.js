@@ -131,7 +131,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                 var divMinus = '<div id="btnMinus" class="btnMinus" />';
                 $(recordset).children().first().before(divMinus);
                 var btnMinus = $(recordset).children("#btnMinus");
-                if (isAdmin) {
+                if (classification === 1) {
                     if (!options.styleOverride) {
                         btnMinus.css({
                             'float': 'right',

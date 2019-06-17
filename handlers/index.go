@@ -8,25 +8,27 @@ import (
 
 // this function serves the index page of the program
 func (db *MyDB) index(c echo.Context) error {
-	userID, admin := getUserStatus(&c) // get the user ID and the admin bool from the cookie that is stored
-	var username string
+	userID, classification := getUserStatus(&c) // get the user ID and the classification int from the cookie that is stored
+	var usernameArr []string
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
-	var users []models.User
-	db.GormDB.Preload("Tasks").Order("[order] ASC").Find(&users) // get the users ordered by the [order] column
-	for _, element := range users {                              // sets the `username` variable to the current user
-		if element.ID == userID { // checks the user ID
-			username = element.Username // gets the username
-		}
-	}
-	users = users[1:] // remove the first element from the users array (to display them in the UserTask section)
+	var followingUsers []models.User
+	var workingOnUsers []models.User
+	// get the followingUsers ordered by the [order] column
+	db.GormDB.Preload("Tasks").Order("[order] ASC").Find(&followingUsers, "classification = 2")
+	// get the workingOnUsers ordered by the [order] column
+	db.GormDB.Preload("Tasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
+
+	db.GormDB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &usernameArr)
+	username := usernameArr[0]
 	return c.Render(http.StatusOK, "index.html", echo.Map{
-		"title":    "الرئيسية", // sets the title of the page
-		"status":   status,     // pass the status of the flash message
-		"message":  message,    // pass the message
-		"users":    users,      // pass the users array
-		"admin":    admin,      // pass the isAdmin variable to use in JS
-		"userID":   userID,     // pass the userID
-		"username": username,   // pass the username
+		"title":          "الرئيسية",     // sets the title of the page
+		"status":         status,         // pass the status of the flash message
+		"message":        message,        // pass the message
+		"followingUsers": followingUsers, // pass the followingUsers array
+		"workingOnUsers": workingOnUsers, // pass the workingOnUsers array
+		"classification": classification, // pass the classification variable to use in JS
+		"userID":         userID,         // pass the userID
+		"username":       username,       // pass the username
 	})
 }
 
