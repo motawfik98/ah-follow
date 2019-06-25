@@ -6,13 +6,14 @@ import (
 
 type User struct {
 	gorm.Model
-	Username       string `form:"username" gorm:"unique_index" json:"username"`
-	Password       string `form:"password"`
-	Hash           string
-	Order          int
-	Classification int             `gorm:"NOT NULL" json:"classification"`
-	Tasks          []*UserTask     `gorm:"PRELOAD:false"`
-	Subscriptions  []*Subscription `gorm:"PRELOAD:false"`
+	Username           string `form:"username" gorm:"unique_index" json:"username"`
+	Password           string `form:"password"`
+	Hash               string
+	Order              int
+	Classification     int                  `gorm:"NOT NULL" json:"classification"`
+	FollowingUserTasks []*FollowingUserTask `gorm:"PRELOAD:false"`
+	WorkingOnUserTasks []*WorkingOnUserTask `gorm:"PRELOAD:false"`
+	Subscriptions      []*Subscription      `gorm:"PRELOAD:false"`
 }
 
 // this function updates the Hash and Admin column of the user after create

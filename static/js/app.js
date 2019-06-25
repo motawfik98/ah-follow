@@ -42,7 +42,7 @@ let cols = [
         name: "updated_at",
     }, {
         width: "5%",
-        data: "users",
+        data: "following_users",
         orderable: false,
         render: function (data) {
             return data.length;
@@ -50,7 +50,7 @@ let cols = [
         },
     }, {
         width: "5%",
-        data: "people",
+        data: "workingOn_users",
         name: "totalResponses",
         orderable: false,
         render: function (data, type, row, meta) {
@@ -87,16 +87,16 @@ let cols = [
         width: "5%",
         orderable: false,
         name: "peopleActions",
-        data: "people",
+        data: "workingOn_users",
         render: function (data) {
-            return generatePeopleTable(data);
+            return generateWorkingOnTable(data);
         }
     }
 ];
 
 $(document).ready(function () {
 
-    $('#selectedUsers').select2({
+    $('#selectedFollowingUsers').select2({
         placeholder: "الاسم",
         dir: "rtl"
     });
@@ -245,8 +245,9 @@ $(document).ready(function () {
             if (classification === 1 && !data.seen) {
                 $(row).children().first().addClass('unseen');
             }
-            for (let i = 0; i < data.users.length; i++) {
-                if (data.users[i].user_id === userID && !data.users[i].seen) {
+            console.log(data);
+            for (let i = 0; i < data.following_users.length; i++) {
+                if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
                     $(row).children().first().addClass('unseen');
                 }
             }
@@ -363,7 +364,7 @@ function showPeopleActions() {
             $markAsSeen.addClass("d-none");
         }
         const modifier = editor.modifier();
-        let $selectedUsers = $('#selectedUsers');
+        let $selectedUsers = $('#selectedFollowingUsers');
         if (classification === 1) {
             if (modifier) {
                 const data = myTable.row(modifier).data();
@@ -375,9 +376,9 @@ function showPeopleActions() {
             $selectedUsers.attr('disabled', true);
             if (modifier) {
                 const data = myTable.row(modifier).data();
-                for (let i = 0; i < data.users.length; i++) {
-                    if (data.users[i].user_id === userID && !data.users[i].seen) {
-                        changePersonTaskSeenProperty(data.ID, data.users[i].user_id, true);
+                for (let i = 0; i < data.following_users.length; i++) {
+                    if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
+                        changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true);
                     }
                 }
             }
@@ -390,13 +391,13 @@ function showPeopleActions() {
             const data = myTable.row(modifier).data();
             const finalAction = this.field('final_action');
             finalAction.val(data.final_action.String);
-            for (let i = 1; i <= data.users.length; i++) {
-                selectedPeopleIDs.push(data.users[i - 1].user.ID);
+            for (let i = 1; i <= data.following_users.length; i++) {
+                selectedPeopleIDs.push(data.following_users[i - 1].user.ID);
             }
             $selectedUsers.val(selectedPeopleIDs);
             $selectedUsers.trigger('change'); // Notify any JS components that the value changed
 
-            for (let i = 1; i <= data.people.length; i++) {
+            for (let i = 1; i <= data.workingOn_users.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
 
@@ -404,7 +405,7 @@ function showPeopleActions() {
                 if (classification === 1)
                     changeTaskSeenProperty(data.ID, false);
                 else
-                    changePersonTaskSeenProperty(data.ID, userID, false);
+                    changeUserTaskSeenProperty(data.ID, userID, false);
 
             });
         }
@@ -413,10 +414,10 @@ function showPeopleActions() {
 
 function addPersonAndHisActionToModal(i, data) {
     $('#btnPlus').trigger('click');
-    $('#id_' + i + '_repeat').val(data.people[i - 1].ID);
-    $('#name_' + i + '_repeat').val(data.people[i - 1].name);
-    $('#action_' + i + '_repeat').val(data.people[i - 1].action_taken);
-    $('#finalResponse_' + i + '_repeat').prop('checked', data.people[i - 1].final_response);
+    $('#id_' + i + '_repeat').val(data.workingOn_users[i - 1].ID);
+    $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id);
+    $('#action_' + i + '_repeat').val(data.workingOn_users[i - 1].action_taken);
+    $('#finalResponse_' + i + '_repeat').prop('checked', data.workingOn_users[i - 1].final_response);
 }
 
 function changeTaskSeenProperty(taskID, seenProperty) {
@@ -427,7 +428,7 @@ function changeTaskSeenProperty(taskID, seenProperty) {
 
 }
 
-function changePersonTaskSeenProperty(taskID, userID, seenProperty) {
+function changeUserTaskSeenProperty(taskID, userID, seenProperty) {
     $.post("/tasks/person/seen", {
         seen: seenProperty,
         task_id: taskID,
@@ -473,17 +474,17 @@ function sendExtraFormDataAndValidate() {
         }
 
 
-        let selectedUsers = $('#selectedUsers').val();
+        let selectedUsers = $('#selectedFollowingUsers').val();
         const numberOfExtraUsers = selectedUsers.length;
         data.data['totalUsers'] = numberOfExtraUsers;
         for (let i = 0; i < numberOfExtraUsers; i++) {
-            data.data["users_" + i] = selectedUsers[i];
+            data.data["following_users_" + i] = selectedUsers[i];
         }
 
-        data.data['totalPeople'] = numberOfPeople;
+        data.data['totalWorkingOnUsers'] = numberOfPeople;
         for (let i = 0; i < numberOfPeople; i++) {
             data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();
-            data.data["people_name_" + i] = $('#name_' + (i + 1) + '_repeat').val();
+            data.data["people_user_id_" + i] = $('#user_id_' + (i + 1) + '_repeat').val();
             data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
             data.data["people_finalResponse_" + i] = $('#finalResponse_' + (i + 1) + '_repeat').is(':checked');
         }
@@ -492,7 +493,7 @@ function sendExtraFormDataAndValidate() {
     })
 }
 
-function generatePeopleTable(data) {
+function generateWorkingOnTable(data) {
     let innerTable = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px; width: 80%">';
     innerTable += '<thead><tr>';
     innerTable += '<th>القائم به</th><th>الموقف</th>';

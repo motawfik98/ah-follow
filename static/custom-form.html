@@ -15,7 +15,7 @@
 
         <fieldset class="border p-2">
             <legend>المتابع</legend>
-            <select class="form-control js-select2" multiple="multiple" id="selectedUsers">
+            <select class="form-control js-select2" multiple="multiple" id="selectedFollowingUsers">
                 <option></option>
                 {{range .followingUsers}}
                     <option value="{{.ID}}">{{.Username}}</option>
@@ -31,8 +31,12 @@
                         <div class="form-row m-3">
                             <div class="col-12 col-md-4">
                                 <input type="hidden" name="id_1_repeat" id="id_1_repeat">
-                                <input type="text" name="name_1_repeat" class="form-control" id="name_1_repeat"
-                                       placeholder="الاسم">
+                                <select class="form-control js-select2" id="user_id_1_repeat" name="user_id_1_repeat">
+                                    <option disabled selected value="0">اسم القائم به</option>
+                                    {{range .workingOnUsers}}
+                                        <option value="{{.ID}}">{{.Username}}</option>
+                                    {{end}}
+                                </select>
                             </div>
                             <div class="col-12 col-md form-group">
                                 <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"

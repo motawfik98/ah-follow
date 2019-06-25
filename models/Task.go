@@ -8,13 +8,13 @@ import (
 // this struct holds the data needed for the task
 type Task struct {
 	gorm.Model
-	Description string         `gorm:"not null;type:nvarchar(1024)" form:"description" json:"description"`
-	Users       []*UserTask    `gorm:"PRELOAD:false" json:"users"`
-	People      []Person       `gorm:"PRELOAD:false" json:"people"`
-	FinalAction sql.NullString `json:"final_action" gorm:"default: null;type:nvarchar(1024)"`
-	Files       []File         `json:"files" gorm:"PRELOAD:false"`
-	Seen        bool           `gorm:"default:1;not null" json:"seen"`
-	Hash        string
+	Description    string         `gorm:"not null;type:nvarchar(1024)" form:"description" json:"description"`
+	FinalAction    sql.NullString `json:"final_action" gorm:"default: null;type:nvarchar(1024)"`
+	Files          []File         `json:"files" gorm:"PRELOAD:false"`
+	Seen           bool           `gorm:"default:1;not null" json:"seen"`
+	Hash           string
+	FollowingUsers []*FollowingUserTask `json:"following_users"`
+	WorkingOnUsers []*WorkingOnUserTask `json:"workingOn_users"`
 }
 
 func (task *Task) AfterCreate(scope *gorm.Scope) error {
@@ -24,28 +24,8 @@ func (task *Task) AfterCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-// this function removes all the UserTasks that were assigned to that task
-func (task *Task) DeleteChildren(db *gorm.DB) {
-	for i := 0; i < len(task.Users); i++ {
-		db.Delete(task.Users[i])
-	}
-}
-
-// this function takes the search parameters (datatables parameters) and return the corresponding data
-func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
-	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
-	classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
-
-	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
-	var tasks []Task
-	var totalNumberOfRowsInDatabase int
-	if classification == 2 {
-		// join the user_tasks table to get only the tasks that were assigned to the logged in user
-		db = db.Table("tasks").Joins("JOIN user_tasks ON user_tasks.task_id = tasks.id")
-		db = db.Where("user_tasks.user_id = ?", userID)
-	}
-	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase) // gets the total number of records available for that specific user (or admin)
-	if retrieveType == "replied" {                        // if the end user searches by the tasks that DOES HAVE final action
+func searchByRetrieveType(db *gorm.DB, retrieveType string, classification int) *gorm.DB {
+	if retrieveType == "replied" { // if the end user searches by the tasks that DOES HAVE final action
 		db = db.Where("final_action IS NOT NULL")
 	} else if retrieveType == "nonReplied" { // if the end user searches by the tasks that DOES NOT HAVE final action
 		db = db.Where("final_action IS NULL")
@@ -61,21 +41,20 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		} else { // if not
 			db = db.Where("user_tasks.seen = 1") // get all the tasks that he has not seen weather or not it has a `final_action`
 		}
-	} else if retrieveType == "notRepliedByAll" { // if the end user wants to get the tasks that was not replied by all the people it was assigned to
+	} else if retrieveType == "notRepliedByAll" { // if the end user wants to get the tasks that was not replied by all the workingOnUsers it was assigned to
 		var ids []int
 		// gets the `ids` of the tasks that there is any person who's final response is equal to 0
 		db.Table("tasks").Select("tasks.id").
-			Joins("JOIN people ON tasks.id = people.task_id").
-			Where("final_response = 0 AND people.deleted_at IS NULL").
+			Joins("JOIN working_on_user_tasks wout ON tasks.id = wout.task_id").
+			Where("wout.final_response = 0 AND wout.deleted_at IS NULL").
 			Group("tasks.id").Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
 		db = db.Where("tasks.id IN (?)", ids)
 	}
-	db = db.Preload("Users").Preload("People")
-	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
-		//return db.Table("files").Select("id")
-		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
-	})
+	return db
+}
+
+func filterByFields(db *gorm.DB, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch string) *gorm.DB {
 	if descriptionSearch != "" { // if the end user entered data in the description search
 		descriptionSearch = "%" + descriptionSearch + "%" // search by the entered value with % before and after to match any
 		db = db.Where("description LIKE ?", descriptionSearch)
@@ -85,8 +64,9 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		sentToSearch = "%" + sentToSearch + "%" // add % before and after to match any
 		// gets the ids of the tasks which have the search value in their People array
 		db.Table("tasks").Select("DISTINCT tasks.id").
-			Joins("JOIN people ON tasks.id = people.task_id").
-			Where("people.name LIKE ?", sentToSearch).Pluck("tasks.id", &ids)
+			Joins("JOIN working_on_user_tasks wout ON tasks.id = wout.task_id").
+			Joins("JOIN users ON users.id = wout.user_id").
+			Where("users.username LIKE ?", sentToSearch).Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
 		db = db.Where("tasks.id IN (?)", ids)
 	}
@@ -98,6 +78,37 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 		maxDateSearch = maxDateSearch + " 00:00:00.0000000 +02:00" // add correct formatting to the date search
 		db = db.Where("created_at <= ?", maxDateSearch)
 	}
+	return db
+}
+
+// this function takes the search parameters (datatables parameters) and return the corresponding data
+func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
+	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
+	classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
+
+	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
+	var tasks []Task
+	var totalNumberOfRowsInDatabase int
+
+	if classification == 2 {
+		// join the user_tasks table to get only the tasks that were assigned to the logged in user
+		db = db.Table("tasks").Joins("JOIN following_user_tasks user_tasks " +
+			"ON user_tasks.task_id = tasks.id")
+		db = db.Where("user_tasks.user_id = ?", userID)
+	} else if classification == 3 {
+		// join the user_tasks table to get only the tasks that were assigned to the logged in user
+		db = db.Table("tasks").Joins("JOIN working_on_user_tasks user_tasks " +
+			"ON user_tasks.task_id = tasks.id")
+		db = db.Where("user_tasks.user_id = ?", userID)
+	}
+	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase) // gets the total number of records available for that specific user (or admin)
+	db = searchByRetrieveType(db, retrieveType, classification)
+
+	db = db.Preload("FollowingUsers").Preload("WorkingOnUsers")
+	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
+	})
+	db = filterByFields(db, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch)
 	// gets the total number of records after applying all the filtering
 	var totalNumberOfRowsAfterFilter int
 	db.Find(&tasks).Count(&totalNumberOfRowsAfterFilter)

@@ -3,17 +3,40 @@ package models
 import "github.com/jinzhu/gorm"
 
 type UserTask struct {
-	TaskID uint `gorm:"primary_key;auto_increment:false;type:int" json:"task_id"`
-	Task   *Task
-	UserID uint  `gorm:"primary_key;auto_increment:false;type:int" json:"user_id"`
-	User   *User `json:"user"`
-	Seen   bool  `json:"seen" gorm:"default:0;not null"`
+	gorm.Model
+	TaskID       uint `gorm:"unique_index:idx_user_task" json:"task_id"`
+	Task         *Task
+	UserID       uint  `gorm:"unique_index:idx_user_task" json:"user_id"`
+	User         *User `json:"user"`
+	Seen         bool  `json:"seen" gorm:"default:0;not null"`
+	MarkedAsSeen bool  `json:"marked_as_seen" gorm:"default:0; not null"`
 }
 
-func CreateUserTask(db *gorm.DB, taskID, userID uint) {
-	personTask := UserTask{
-		TaskID: taskID,
-		UserID: userID,
+type FollowingUserTask struct {
+	UserTask
+}
+
+type WorkingOnUserTask struct {
+	UserTask
+	ActionTaken   string `json:"action_taken"`
+	FinalResponse bool   `json:"final_response" gorm:"default:0"`
+	FollowerID    uint   `json:"follower_id"`
+}
+
+func CreateFollowingUserTask(db *gorm.DB, taskID, userID uint) {
+	personTask := FollowingUserTask{
+		UserTask: UserTask{TaskID: taskID, UserID: userID},
 	}
 	db.Create(&personTask)
+}
+
+func CreateWorkingOnUserTask(db *gorm.DB, taskID, userID uint, action string, finalResponse bool, followerID uint) uint {
+	personTask := WorkingOnUserTask{
+		UserTask:      UserTask{TaskID: taskID, UserID: userID},
+		ActionTaken:   action,
+		FinalResponse: finalResponse,
+		FollowerID:    followerID,
+	}
+	db.Create(&personTask)
+	return personTask.UserID
 }
