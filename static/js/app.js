@@ -1,7 +1,8 @@
 let editor; // use a global for the submit and return data rendering in the examples
 let myTable;
 const maxTextLength = ($(window).width() < 991.98) ? 50 : 180;
-let cols = [
+let cols;
+let basicCols = [
     {
         width: "5%",
         class: "control",
@@ -40,59 +41,67 @@ let cols = [
             return data.substring(0, 10)
         },
         name: "updated_at",
-    }, {
-        width: "5%",
-        data: "following_users",
-        orderable: false,
-        render: function (data) {
-            return data.length;
-
-        },
-    }, {
-        width: "5%",
-        data: "workingOn_users",
-        name: "totalResponses",
-        orderable: false,
-        render: function (data, type, row, meta) {
-            let finalResponses = 0;
-            for (let i = 0; i < data.length; i++)
-                if (data[i].final_response)
-                    finalResponses++;
-            return finalResponses + '/' + data.length;
-        },
-    }, {
-        width: "5%",
-        data: {
-            final_action: "final_action",
-            users: "users"
-        },
-        name: "finalAction",
-        orderable: false,
-        render: function (data) {
-            if (data.final_action.String === "") {
-                return "لا";
-            } else {
-                return "نعم";
-            }
-        },
-    }, {
-        width: "5%",
-        orderable: false,
-        name: "fullDescription",
-        data: "description",
-        render: function (data) {
-            return data;
-        }
-    }, {
-        width: "5%",
-        orderable: false,
-        name: "peopleActions",
-        data: "workingOn_users",
-        render: function (data) {
-            return generateWorkingOnTable(data);
-        }
+        visible: false,
     }
 ];
+if (classification === 3) {
+    cols = basicCols;
+} else {
+    cols = basicCols.concat([
+        {
+            width: "5%",
+            data: "following_users",
+            orderable: false,
+            render: function (data) {
+                return data.length;
+
+            },
+        }, {
+            width: "5%",
+            data: "workingOn_users",
+            name: "totalResponses",
+            orderable: false,
+            render: function (data, type, row, meta) {
+                let finalResponses = 0;
+                for (let i = 0; i < data.length; i++)
+                    if (data[i].final_response)
+                        finalResponses++;
+                return finalResponses + '/' + data.length;
+            },
+        }, {
+            width: "5%",
+            data: {
+                final_action: "final_action",
+                users: "users"
+            },
+            name: "finalAction",
+            orderable: false,
+            render: function (data) {
+                if (data.final_action.String === "") {
+                    return "لا";
+                } else {
+                    return "نعم";
+                }
+            },
+        }, {
+            width: "5%",
+            orderable: false,
+            name: "fullDescription",
+            data: "description",
+            render: function (data) {
+                return data;
+            }
+        }, {
+            width: "5%",
+            orderable: false,
+            name: "peopleActions",
+            data: "workingOn_users",
+            render: function (data) {
+                return generateWorkingOnTable(data);
+            }
+        }
+    ]);
+}
 
 $(document).ready(function () {
 
@@ -245,7 +254,6 @@ $(document).ready(function () {
             if (classification === 1 && !data.seen) {
                 $(row).children().first().addClass('unseen');
             }
-            console.log(data);
             for (let i = 0; i < data.following_users.length; i++) {
                 if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
                     $(row).children().first().addClass('unseen');
@@ -372,13 +380,23 @@ function showPeopleActions() {
                     changeTaskSeenProperty(data.ID, true);
                 }
             }
-        } else {
+        } else if (classification === 2) {
             $selectedUsers.attr('disabled', true);
             if (modifier) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.following_users.length; i++) {
                     if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
-                        changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true);
+                        changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true, true);
+                    }
+                }
+            }
+        } else {
+            $selectedUsers.attr('disabled', true);
+            if (modifier) {
+                const data = myTable.row(modifier).data();
+                for (let i = 0; i < data.workingOn_users.length; i++) {
+                    if (data.workingOn_users[i].user_id === userID && !data.workingOn_users[i].seen) {
+                        changeUserTaskSeenProperty(data.ID, data.workingOn_users[i].user_id, true, false);
                     }
                 }
             }
@@ -392,7 +410,7 @@ function showPeopleActions() {
             const finalAction = this.field('final_action');
             finalAction.val(data.final_action.String);
             for (let i = 1; i <= data.following_users.length; i++) {
-                selectedPeopleIDs.push(data.following_users[i - 1].user.ID);
+                selectedPeopleIDs.push(data.following_users[i - 1].user_id);
             }
             $selectedUsers.val(selectedPeopleIDs);
             $selectedUsers.trigger('change'); // Notify any JS components that the value changed
@@ -415,9 +433,19 @@ function showPeopleActions() {
 function addPersonAndHisActionToModal(i, data) {
     $('#btnPlus').trigger('click');
     $('#id_' + i + '_repeat').val(data.workingOn_users[i - 1].ID);
-    $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id);
-    $('#action_' + i + '_repeat').val(data.workingOn_users[i - 1].action_taken);
-    $('#finalResponse_' + i + '_repeat').prop('checked', data.workingOn_users[i - 1].final_response);
+    $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id).attr("readonly", true).attr("disabled", true);
+    let $actionTaken = $('#action_' + i + '_repeat');
+    let $workingOnNotes = $('#workingOnNotes_' + i + '_repeat');
+    let $finalResponse = $('#finalResponse_' + i + '_repeat');
+    $actionTaken.val(data.workingOn_users[i - 1].action_taken);
+    $workingOnNotes.val(data.workingOn_users[i - 1].notes);
+    $finalResponse.prop('checked', data.workingOn_users[i - 1].final_response);
+    if (classification === 3) {
+        $actionTaken.attr("readonly", true).attr("disabled", true);
+        $finalResponse.attr("readonly", true).attr("disabled", true);
+    } else {
+        $workingOnNotes.prop("readonly", true).prop("disabled", true);
+    }
 }
 
 function changeTaskSeenProperty(taskID, seenProperty) {
@@ -428,11 +456,12 @@ function changeTaskSeenProperty(taskID, seenProperty) {
 
 }
 
-function changeUserTaskSeenProperty(taskID, userID, seenProperty) {
+function changeUserTaskSeenProperty(taskID, userID, seenProperty, isFollower) {
     $.post("/tasks/person/seen", {
         seen: seenProperty,
         task_id: taskID,
-        user_id: userID
+        user_id: userID,
+        is_follower: isFollower,
     });
 }
 
@@ -486,6 +515,7 @@ function sendExtraFormDataAndValidate() {
             data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();
             data.data["people_user_id_" + i] = $('#user_id_' + (i + 1) + '_repeat').val();
             data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
+            data.data["people_notes_" + i] = $('#workingOnNotes_' + (i + 1) + '_repeat').val();
             data.data["people_finalResponse_" + i] = $('#finalResponse_' + (i + 1) + '_repeat').is(':checked');
         }
 

@@ -15,10 +15,12 @@
                     <label for="description">التكليف</label>
                     <input class="form-control search" id="description" placeholder="التكليف"/>
                 </div>
-                <div class="form-group col-12 col-md">
-                    <label for="sent_to">القائم به</label>
-                    <input type="text" class="form-control search" id="sent_to" placeholder="القائم به"/>
-                </div>
+                {{ if ne .classification 3}}
+                    <div class="form-group col-12 col-md">
+                        <label for="sent_to">القائم به</label>
+                        <input type="text" class="form-control search" id="sent_to" placeholder="القائم به"/>
+                    </div>
+                {{end}}
                 <div class="form-group col-6 col-md">
                     <label for="min">من</label>
                     <input type="text" class="form-control search datepicker" id="min" placeholder="من"/>
@@ -33,42 +35,65 @@
         </form>
     </div>
     <div class="row my-2 d-block">
-        <fieldset class="border p-2 d-md-inline">
-            <legend style="font-size:16px; height:5px">
-                {{if eq .classification 1}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
-            </legend>
+        {{ if eq .classification 3}}
+            <fieldset class="border p-2 d-md-inline">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
+                           value="unseen" checked>
+                    <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
+                           value="seen">
+                    <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
+                           value="all">
+                    <label class="form-check-label" for="inlineRadio2">الكل</label>
+                </div>
+            </fieldset>
 
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
-                       value="unseen" checked>
-                <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
-                       value="seen">
-                <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
-                       {{if eq .classification 1}}value="replied" {{else}}value="all"{{end}}>
-                <label class="form-check-label" for="inlineRadio2">الكل</label>
-            </div>
-        </fieldset>
+        {{else}}
 
-        <fieldset class="border p-2 d-md-inline ml-md-5">
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
-                       {{if eq .classification 1}}value="all" {{else}}value="notRepliedByAll"{{end}}>
-                <label class="form-check-label" for="inlineRadio1">
-                    {{if eq .classification 1}}استرجاع الكل{{else}}لم يرد كل القائمين به{{end}}
-                </label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio3"
-                       value="nonReplied">
-                <label class="form-check-label" for="inlineRadio3">استرجاع بدون اجراء نهائي</label>
-            </div>
-        </fieldset>
+
+            <fieldset class="border p-2 d-md-inline">
+                <legend style="font-size:16px; height:5px">
+                    {{if eq .classification 1}}لهم اجراء النهائي{{else}}تكليفات من الوزير{{end}}
+                </legend>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
+                           value="unseen" checked>
+                    <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
+                           value="seen">
+                    <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
+                           {{if eq .classification 1}}value="replied" {{else}}value="all"{{end}}>
+                    <label class="form-check-label" for="inlineRadio2">الكل</label>
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-2 d-md-inline ml-md-5">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
+                           {{if eq .classification 1}}value="all" {{else}}value="notRepliedByAll"{{end}}>
+                    <label class="form-check-label" for="inlineRadio1">
+                        {{if eq .classification 1}}استرجاع الكل{{else}}لم يرد كل القائمين به{{end}}
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio3"
+                           value="nonReplied">
+                    <label class="form-check-label" for="inlineRadio3">استرجاع بدون اجراء نهائي</label>
+                </div>
+            </fieldset>
+        {{end}}
     </div>
 
 {{end}}

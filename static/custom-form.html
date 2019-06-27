@@ -9,7 +9,9 @@
 
         <editor-field name="description"></editor-field>
 
-        <editor-field name="final_action"></editor-field>
+        {{if ne .classification 3}}
+            <editor-field name="final_action"></editor-field>
+        {{end}}
 
         <editor-field name="files[].id" id="fileUploader"></editor-field>
 
@@ -30,8 +32,9 @@
                     <div class="recordset">
                         <div class="form-row m-3">
                             <div class="col-12 col-md-4">
-                                <input type="hidden" name="id_1_repeat" id="id_1_repeat">
-                                <select class="form-control js-select2" id="user_id_1_repeat" name="user_id_1_repeat">
+                                <input type="hidden" name="id_1_repeat" id="id_1_repeat" class="repeat_form">
+                                <select class="form-control js-select2" id="user_id_1_repeat" name="user_id_1_repeat"
+                                        class="repeat_form">
                                     <option disabled selected value="0">اسم القائم به</option>
                                     {{range .workingOnUsers}}
                                         <option value="{{.ID}}">{{.Username}}</option>
@@ -39,15 +42,21 @@
                                 </select>
                             </div>
                             <div class="col-12 col-md form-group">
-                                <input type="text" name="action_1_repeat" class="form-control" id="action_1_repeat"
+                                <input type="text" name="action_1_repeat" class="form-control repeat_form"
+                                       id="action_1_repeat"
                                        placeholder="الموقف">
                                 <div class="invalid-feedback">
                                     يجب ان تحدد الموقف قبل اعتباره الاخير
                                 </div>
                             </div>
                             <div class="col-1 form-check pl-3">
-                                <input type="checkbox" class="form-check-input" id="finalResponse_1_repeat">
+                                <input type="checkbox" class="form-check-input repeat_form" id="finalResponse_1_repeat">
                                 <label class="form-check-label" for="finalResponse_1_repeat">موقف نهائي</label>
+                            </div>
+                            <div class="col-12">
+                                <label for="workingOnNotes_1_repeat">ملاحظات القائم به</label>
+                                <textarea name="workingOnUserNotes" id="workingOnNotes_1_repeat" style="width:100%"
+                                          rows="2"></textarea>
                             </div>
                         </div>
                     </div>

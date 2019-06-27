@@ -14,9 +14,9 @@ func (db *MyDB) index(c echo.Context) error {
 	var followingUsers []models.User
 	var workingOnUsers []models.User
 	// get the followingUsers ordered by the [order] column
-	db.GormDB.Preload("Tasks").Order("[order] ASC").Find(&followingUsers, "classification = 2")
+	db.GormDB.Preload("FollowingUserTasks").Order("[order] ASC").Find(&followingUsers, "classification = 2")
 	// get the workingOnUsers ordered by the [order] column
-	db.GormDB.Preload("Tasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
+	db.GormDB.Preload("WorkingOnUserTasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
 
 	db.GormDB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &usernameArr)
 	username := usernameArr[0]

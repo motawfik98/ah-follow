@@ -43,17 +43,19 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
             var set = recordset.children(".recordset").children().first();
             var btnPlus = obj.siblings("#btnPlus");
 
-            if (!options.styleOverride) {
-                btnPlus.css({
-                    'float': 'right',
-                    'border': '0px',
-                    'background-image': 'url("img/add.png")',
-                    'background-position': 'center center',
-                    'background-repeat': 'no-repeat',
-                    'height': '25px',
-                    'width': '25px',
-                    'cursor': 'pointer',
-                });
+            if (classification !== 3) {
+                if (!options.styleOverride) {
+                    btnPlus.css({
+                        'float': 'right',
+                        'border': '0px',
+                        'background-image': 'url("img/add.png")',
+                        'background-position': 'center center',
+                        'background-repeat': 'no-repeat',
+                        'height': '25px',
+                        'width': '25px',
+                        'cursor': 'pointer',
+                    });
+                }
             }
 
             if (recordset.length) {

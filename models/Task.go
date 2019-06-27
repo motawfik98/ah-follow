@@ -104,7 +104,18 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase) // gets the total number of records available for that specific user (or admin)
 	db = searchByRetrieveType(db, retrieveType, classification)
 
-	db = db.Preload("FollowingUsers").Preload("WorkingOnUsers")
+	if classification == 3 {
+		db = db.Preload("WorkingOnUsers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("working_on_user_tasks.user_id = ?", userID)
+		})
+		db = db.Preload("FollowingUsers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("following_user_tasks.user_id IN (?)",
+				db.Table("working_on_user_tasks").Select("working_on_user_tasks.follower_id").
+					Where("working_on_user_tasks.user_id = ? AND working_on_user_tasks.deleted_at IS NULL", userID).QueryExpr())
+		})
+	} else {
+		db = db.Preload("FollowingUsers").Preload("WorkingOnUsers")
+	}
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
 	})

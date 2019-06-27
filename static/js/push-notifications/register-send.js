@@ -2,10 +2,7 @@
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-            .then((reg) => {
-                console.log('Service worker application registered.', reg);
-            });
+        navigator.serviceWorker.register('service-worker.js');
     });
 }
 
@@ -31,11 +28,9 @@ navigator.serviceWorker.ready
     .then(function (registration) {
         return registration.pushManager.getSubscription()
             .then(async function (subscription) {
-                console.log(JSON.stringify(subscription));
                 if (subscription) {
                     return subscription;
                 }
-                console.log("No subscription available");
                 const permission = await requestNotificationPermission();
                 if (permission === "granted") {
                     const vapidPublicKey = 'BHdQL2HMczQYoKR7EIlGBaUSHUWrDQokRducAdSFAej7nbix6H7F00PiKT3Z0wJ4NLRSxgeRfgsPUD8-X77iLO4';

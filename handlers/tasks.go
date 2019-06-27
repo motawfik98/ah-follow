@@ -121,7 +121,8 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, taskID int, followerID uint) []
 
 		action := c.FormValue("data[people_action_" + strconv.Itoa(i) + "]")                                     // get the userTask's action
 		finalResponse, _ := strconv.ParseBool(c.FormValue("data[people_finalResponse_" + strconv.Itoa(i) + "]")) // get the boolean indicating weather or not it is a final action
-		if userID == "" {                                                                                        // if no userID is given then continue
+		notes := c.FormValue("data[people_notes_" + strconv.Itoa(i) + "]")
+		if userID == "" { // if no userID is given then continue
 			continue
 		}
 		db.GormDB.Where("user_id = ? AND task_id = ?", userID, taskID).Find(&userTask) // try to get the userTask with the same userID and task id
@@ -131,6 +132,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, taskID int, followerID uint) []
 		} else { // if found edit his data
 			userTask.ActionTaken = action
 			userTask.FinalResponse = finalResponse
+			userTask.Notes = notes
 			db.GormDB.Save(&userTask)
 			id = userTask.UserID
 		}
@@ -156,10 +158,28 @@ func (db *MyDB) RemoveTask(c echo.Context) error {
 
 // this function changes the seen value of the user on a task
 func (db *MyDB) ChangeUserSeen(c echo.Context) error {
-	seen := c.FormValue("seen")
+	seen, _ := strconv.ParseBool(c.FormValue("seen"))
 	taskID := c.FormValue("task_id") // gets the value of task_id
 	userID := c.FormValue("user_id") // gets the value of user_id
-	db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).Update("seen", seen)
+	isFollower, _ := strconv.ParseBool(c.FormValue("is_follower"))
+	if isFollower {
+		if seen {
+			db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+				Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false})
+		} else {
+			db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+				Update("marked_as_unseen", true)
+		}
+	} else {
+		if seen {
+			db.GormDB.Model(models.WorkingOnUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+				Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false})
+		} else {
+			db.GormDB.Model(models.WorkingOnUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+				Update("marked_as_unseen", true)
+		}
+
+	}
 	return nil
 }
 
@@ -173,7 +193,8 @@ func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
 
 // this function gets the parameters of the datatable to send it to `GetAllTasks` function
 func (db *MyDB) GetTasks(c echo.Context) error {
-	q := c.Request().URL.Query() // gets the URL Query as a map
+	userID, classification := getUserStatus(&c) // gets the value of userID and classification
+	q := c.Request().URL.Query()                // gets the URL Query as a map
 	draw, _ := strconv.Atoi(q["draw"][0])
 	start, _ := strconv.Atoi(q["start"][0])                         // the start point of the current data set
 	length, _ := strconv.Atoi(q["length"][0])                       // number of records to display (page size)
@@ -181,12 +202,14 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	direction := q["order[0][dir]"][0]                              // ordering direction for this column
 	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber) // gets the name of the sorted column (not the numer)
 	sortedColumnName := q[sprintf][0]
-	descriptionSearch := q["description"][0]    // the value of the description search
-	sentToSearch := q["sent_to"][0]             // the value of the sent_to search
-	minDateSearch := q["min_date"][0]           // the value of min_date search
-	maxDateSearch := q["max_date"][0]           // the value of max_date search
-	retrieveType := q["retrieve"][0]            // the value of the retrieve type
-	userID, classification := getUserStatus(&c) // gets the value of userID and classification
+	descriptionSearch := q["description"][0] // the value of the description search
+	sentToSearch := ""
+	if classification != 3 {
+		sentToSearch = q["sent_to"][0] // the value of the sent_to search
+	}
+	minDateSearch := q["min_date"][0] // the value of min_date search
+	maxDateSearch := q["max_date"][0] // the value of max_date search
+	retrieveType := q["retrieve"][0]  // the value of the retrieve type
 	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files := models.GetAllTasks(db.GormDB, start, length,
 		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, classification, userID)
 	dt := dtOutput{
