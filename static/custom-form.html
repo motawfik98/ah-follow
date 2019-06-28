@@ -33,9 +33,10 @@
                         <div class="form-row m-3">
                             <div class="col-12 col-md-4">
                                 <input type="hidden" name="id_1_repeat" id="id_1_repeat" class="repeat_form">
-                                <select class="form-control js-select2" id="user_id_1_repeat" name="user_id_1_repeat"
-                                        class="repeat_form">
-                                    <option disabled selected value="0">اسم القائم به</option>
+                                <select class="form-control workingOn-select2 repeat_form" id="user_id_1_repeat"
+                                        name="user_id_1_repeat"
+                                        style="width:100%">
+                                    <option></option>
                                     {{range .workingOnUsers}}
                                         <option value="{{.ID}}">{{.Username}}</option>
                                     {{end}}
@@ -53,11 +54,13 @@
                                 <input type="checkbox" class="form-check-input repeat_form" id="finalResponse_1_repeat">
                                 <label class="form-check-label" for="finalResponse_1_repeat">موقف نهائي</label>
                             </div>
-                            <div class="col-12">
-                                <label for="workingOnNotes_1_repeat">ملاحظات القائم به</label>
-                                <textarea name="workingOnUserNotes" id="workingOnNotes_1_repeat" style="width:100%"
-                                          rows="2"></textarea>
-                            </div>
+                            {{if ne .classification 1}}
+                                <div class="col-12">
+                                    <label for="workingOnNotes_1_repeat">ملاحظات القائم به</label>
+                                    <textarea name="workingOnUserNotes" id="workingOnNotes_1_repeat" style="width:100%"
+                                              {{if ne .classification 3}} readonly disabled {{end}}rows="2"></textarea>
+                                </div>
+                            {{end}}
                         </div>
                     </div>
                 </div>

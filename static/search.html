@@ -38,19 +38,24 @@
         {{ if eq .classification 3}}
             <fieldset class="border p-2 d-md-inline">
                 <div class="form-check form-check-inline">
-                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio1"
                            value="unseen" checked>
-                    <label class="form-check-label" for="inlineRadio4">استرجاع الجديد</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio5"
-                           value="seen">
-                    <label class="form-check-label" for="inlineRadio5">استرجاع القديم</label>
+                    <label class="form-check-label" for="inlineRadio1">استرجاع الجديد</label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio2"
+                           value="seen">
+                    <label class="form-check-label" for="inlineRadio2">استرجاع القديم</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio3"
                            value="all">
-                    <label class="form-check-label" for="inlineRadio2">الكل</label>
+                    <label class="form-check-label" for="inlineRadio3">الكل</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input search" type="radio" name="retrieveValues" id="inlineRadio4"
+                           value="notFinished">
+                    <label class="form-check-label" for="inlineRadio4">لم يعتبر موقف نهائي</label>
                 </div>
             </fieldset>
 

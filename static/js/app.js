@@ -41,7 +41,7 @@ let basicCols = [
             return data.substring(0, 10)
         },
         name: "updated_at",
-        visible: false,
+        visible: classification !== 3,
     }
 ];
 if (classification === 3) {
@@ -124,7 +124,14 @@ $(document).ready(function () {
         $('.search').trigger("change");
         return false;
     });
-    $("#czContainer").czMore();
+    $("#czContainer").czMore({
+        onAdd: function (index) {
+            $('.workingOn-select2').select2({
+                placeholder: 'اسم القائم به',
+                dir: "rtl",
+            })
+        }
+    });
 
 
     editor = new $.fn.dataTable.Editor({
@@ -254,9 +261,24 @@ $(document).ready(function () {
             if (classification === 1 && !data.seen) {
                 $(row).children().first().addClass('unseen');
             }
-            for (let i = 0; i < data.following_users.length; i++) {
-                if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
-                    $(row).children().first().addClass('unseen');
+            if (classification === 2) {
+                for (let i = 0; i < data.following_users.length; i++) {
+                    if (data.following_users[i].user_id === userID) {
+                        if (!data.following_users[i].seen)
+                            $(row).children().first().addClass('unseen');
+                        else if (data.following_users[i].marked_as_unseen)
+                            $(row).children().first().addClass('marked_as_unseen');
+                    }
+                }
+            }
+            if (classification === 3) {
+                for (let i = 0; i < data.workingOn_users.length; i++) {
+                    if (data.workingOn_users[i].user_id === userID) {
+                        if (!data.workingOn_users[i].seen)
+                            $(row).children().first().addClass('unseen');
+                        else if (data.workingOn_users[i].marked_as_unseen)
+                            $(row).children().first().addClass('marked_as_unseen');
+                    }
                 }
             }
         },
@@ -360,6 +382,9 @@ function openModalOnDoubleClick() {
 
 function showPeopleActions() {
     editor.on('open', function (e, type, action) {
+        if (classification === 3) {
+            removeFilesUpload();
+        }
         let $markAsSeen = $('#markAsSeen');
         if (action === 'edit') {
             if ($markAsSeen.length < 1) {
@@ -385,8 +410,10 @@ function showPeopleActions() {
             if (modifier) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.following_users.length; i++) {
-                    if (data.following_users[i].user_id === userID && !data.following_users[i].seen) {
-                        changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true, true);
+                    if (data.following_users[i].user_id === userID) {
+                        if (!data.following_users[i].seen || data.following_users[i].marked_as_unseen) {
+                            changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true, true);
+                        }
                     }
                 }
             }
@@ -395,8 +422,10 @@ function showPeopleActions() {
             if (modifier) {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.workingOn_users.length; i++) {
-                    if (data.workingOn_users[i].user_id === userID && !data.workingOn_users[i].seen) {
-                        changeUserTaskSeenProperty(data.ID, data.workingOn_users[i].user_id, true, false);
+                    if (data.workingOn_users[i].user_id === userID) {
+                        if (!data.workingOn_users[i].seen || data.workingOn_users[i].marked_as_unseen) {
+                            changeUserTaskSeenProperty(data.ID, data.workingOn_users[i].user_id, true, false);
+                        }
                     }
                 }
             }
@@ -418,22 +447,31 @@ function showPeopleActions() {
             for (let i = 1; i <= data.workingOn_users.length; i++) {
                 addPersonAndHisActionToModal(i, data);
             }
-
-            $('#markAsSeen').on('click', function () {
+            $markAsSeen = $('#markAsSeen');
+            $markAsSeen.off();
+            $markAsSeen.on('click', function () {
                 if (classification === 1)
                     changeTaskSeenProperty(data.ID, false);
+                else if (classification === 2)
+                    changeUserTaskSeenProperty(data.ID, userID, false, true);
                 else
-                    changeUserTaskSeenProperty(data.ID, userID, false);
-
+                    changeUserTaskSeenProperty(data.ID, userID, false, false);
             });
         }
     });
 }
 
+function removeFilesUpload() {
+    $('.eu_table .row').first().remove();
+    $('.eu_table .second .drop').remove();
+    $('.btn.remove').remove();
+
+}
+
 function addPersonAndHisActionToModal(i, data) {
     $('#btnPlus').trigger('click');
     $('#id_' + i + '_repeat').val(data.workingOn_users[i - 1].ID);
-    $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id).attr("readonly", true).attr("disabled", true);
+    $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id).trigger('change').attr("readonly", true).attr("disabled", true);
     let $actionTaken = $('#action_' + i + '_repeat');
     let $workingOnNotes = $('#workingOnNotes_' + i + '_repeat');
     let $finalResponse = $('#finalResponse_' + i + '_repeat');
@@ -443,8 +481,6 @@ function addPersonAndHisActionToModal(i, data) {
     if (classification === 3) {
         $actionTaken.attr("readonly", true).attr("disabled", true);
         $finalResponse.attr("readonly", true).attr("disabled", true);
-    } else {
-        $workingOnNotes.prop("readonly", true).prop("disabled", true);
     }
 }
 
@@ -530,7 +566,7 @@ function generateWorkingOnTable(data) {
     innerTable += '</tr></head><tbody>';
     for (let i = 0; i < data.length; i++) {
         innerTable += '<tr>';
-        innerTable += ('<td>' + data[i].name + '</td>');
+        innerTable += ('<td>' + data[i].user.username + '</td>');
         innerTable += ('<td>' + data[i].action_taken + '</td>');
         innerTable += '</tr>';
     }

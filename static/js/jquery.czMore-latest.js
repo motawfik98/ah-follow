@@ -43,7 +43,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
             var set = recordset.children(".recordset").children().first();
             var btnPlus = obj.siblings("#btnPlus");
 
-            if (classification !== 3) {
+            if (classification === 2) {
                 if (!options.styleOverride) {
                     btnPlus.css({
                         'float': 'right',
@@ -65,7 +65,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                         if ($(this).length !== 0) {
                             const $formRow = $(this).children().last();
                             const $firstCol = $formRow.children().first();
-                            const $input = $firstCol.children().last();
+                            const $input = $firstCol.children().eq(1);
                             if ($.trim($input.val()) === '') {
                                 error = true;
                             }
@@ -133,7 +133,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                 var divMinus = '<div id="btnMinus" class="btnMinus" />';
                 $(recordset).children().first().before(divMinus);
                 var btnMinus = $(recordset).children("#btnMinus");
-                if (classification === 1) {
+                if (classification === 2) {
                     if (!options.styleOverride) {
                         btnMinus.css({
                             'float': 'right',

@@ -36,6 +36,10 @@ td.unseen {
     background-color: burlywood;
 }
 
+td.marked_as_unseen {
+    background-color: tomato;
+}
+
 tr td.select-checkbox {
     width: 5%;
 }

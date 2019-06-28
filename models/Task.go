@@ -33,13 +33,13 @@ func searchByRetrieveType(db *gorm.DB, retrieveType string, classification int) 
 		if classification == 1 { // if the end user was an admin
 			db = db.Where("seen = 0 AND final_action IS NOT NULL") // get all the tasks that has a `final_action` and he has not seen yes
 		} else { // if not
-			db = db.Where("user_tasks.seen = 0") // get all the tasks that he has not seen weather or not it has a `final_action`
+			db = db.Where("(user_tasks.seen = 0 OR user_tasks.marked_as_unseen = 1)") // get all the tasks that he has not seen weather or not it has a `final_action`
 		}
 	} else if retrieveType == "seen" { // if the end user searches by the tasks that HE HAS SEEN BEFORE
 		if classification == 1 { // if the end user was an admin
 			db = db.Where("seen = 1 AND final_action IS NOT NULL") // get all the tasks that has a `final_action` and he has not seen yes
 		} else { // if not
-			db = db.Where("user_tasks.seen = 1") // get all the tasks that he has not seen weather or not it has a `final_action`
+			db = db.Where("user_tasks.seen = 1 AND user_tasks.marked_as_unseen = 0") // get all the tasks that he has not seen weather or not it has a `final_action`
 		}
 	} else if retrieveType == "notRepliedByAll" { // if the end user wants to get the tasks that was not replied by all the workingOnUsers it was assigned to
 		var ids []int
@@ -49,6 +49,12 @@ func searchByRetrieveType(db *gorm.DB, retrieveType string, classification int) 
 			Where("wout.final_response = 0 AND wout.deleted_at IS NULL").
 			Group("tasks.id").Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
+		db = db.Where("tasks.id IN (?)", ids)
+	} else if retrieveType == "notFinished" {
+		var ids []int
+		db.Table("tasks").Select("tasks.id").
+			Where("user_tasks.final_response = 0 AND user_tasks.deleted_at IS NULL").
+			Group("tasks.id").Pluck("tasks.id", &ids)
 		db = db.Where("tasks.id IN (?)", ids)
 	}
 	return db
@@ -114,7 +120,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 					Where("working_on_user_tasks.user_id = ? AND working_on_user_tasks.deleted_at IS NULL", userID).QueryExpr())
 		})
 	} else {
-		db = db.Preload("FollowingUsers").Preload("WorkingOnUsers")
+		db = db.Preload("FollowingUsers").Preload("WorkingOnUsers.User")
 	}
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
