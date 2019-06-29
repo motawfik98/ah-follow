@@ -23,10 +23,10 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	linkFiles(db, &c, taskToSave.ID)
 
 	addFollowersUsers(c, db, taskToSave)
-	userID, classification := getUserStatus(&c)                 // gets the user status (id, admin)
+	_, classification := getUserStatus(&c)                      // gets the user status (id, admin)
 	sendNotification("تم اضافه تكليف جديد", classification, db) // send notification (sent from `classification` variable)
 
-	addWorkingOnUsers(c, db, int(taskToSave.ID), userID)
+	//addWorkingOnUsers(c, db, int(taskToSave.ID), userID)
 
 	// gets the users and people from the database
 	db.GormDB.Preload("Users").Find(&taskToSave, taskToSave.ID)
@@ -74,18 +74,28 @@ func (db *MyDB) EditTask(c echo.Context) error {
 
 	linkFiles(db, &c, task.ID)
 	// only the admin has the privileges to assign or delete users to the task
-	var ids []uint
+	var followersIDs []uint
 	if classification == 1 {
-		ids = append(ids, addFollowersUsers(c, db, task)...)
+		followersIDs = append(followersIDs, addFollowersUsers(c, db, task)...)
 		sendNotification("تم تعديل التكليف", classification, db) // send notifications to the users telling them that the task was edited
 	}
 
-	ids = append(ids, addWorkingOnUsers(c, db, taskID, userID)...)
-	if ids == nil { // checks if the ids array is empty
-		ids = []uint{0} // add a dummy id (0) to avoid unexpected behaviors
+	var workingOnIDs []uint
+	if classification == 2 {
+		workingOnIDs = append(workingOnIDs, addWorkingOnUsers(c, db, taskID, userID)...)
 	}
+
+	if followersIDs == nil {
+		followersIDs = []uint{0}
+	}
+	if workingOnIDs == nil { // checks if the ids array is empty
+		workingOnIDs = []uint{0} // add a dummy id (0) to avoid unexpected behaviors
+	}
+
 	if classification == 1 { // since only the admin has the privileges to delete people
-		db.GormDB.Delete(models.FollowingUserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, ids)
+		db.GormDB.Delete(models.FollowingUserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, followersIDs)
+	} else if classification == 2 {
+		db.GormDB.Delete(models.WorkingOnUserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, workingOnIDs)
 	}
 
 	dataArray := make([]interface{}, 1)

@@ -28,7 +28,10 @@ func CreateFollowingUserTask(db *gorm.DB, taskID, userID uint) {
 	personTask := FollowingUserTask{
 		UserTask: UserTask{TaskID: taskID, UserID: userID},
 	}
-	db.Create(&personTask)
+	databaseError := db.Create(&personTask).GetErrors()
+	if len(databaseError) > 0 {
+		db.Table("following_user_tasks").Where("task_id = ? AND user_id = ?", taskID, userID).Update("deleted_at", nil)
+	}
 }
 
 func CreateWorkingOnUserTask(db *gorm.DB, taskID, userID uint, action string, finalResponse bool, followerID uint) uint {
@@ -38,6 +41,10 @@ func CreateWorkingOnUserTask(db *gorm.DB, taskID, userID uint, action string, fi
 		FinalResponse: finalResponse,
 		FollowerID:    followerID,
 	}
-	db.Create(&personTask)
+	databaseErrors := db.Create(&personTask).GetErrors()
+	if len(databaseErrors) > 0 {
+		db.Table("working_on_user_tasks").Where("task_id = ? AND user_id = ?", taskID, userID).
+			Updates(map[string]interface{}{"deleted_at": nil, "action_taken": action, "final_response": finalResponse, "follower_id": followerID})
+	}
 	return personTask.UserID
 }
