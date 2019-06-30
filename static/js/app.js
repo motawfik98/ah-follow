@@ -103,6 +103,16 @@ if (classification === 3) {
     ]);
 }
 
+function alternateRecordsetColors(index) {
+    let $currentRecordset = $('.recordset').eq(index - 1);
+    $currentRecordset.removeClass('even odd');
+    if ((index - 1) % 2 === 0)
+        $currentRecordset.addClass('even');
+    else
+        $currentRecordset.addClass('odd');
+
+}
+
 $(document).ready(function () {
 
     $('#selectedFollowingUsers').select2({
@@ -129,7 +139,18 @@ $(document).ready(function () {
             $('.workingOn-select2').select2({
                 placeholder: 'اسم القائم به',
                 dir: "rtl",
-            })
+            });
+            if ($('.recordset').length > 0) {
+                alternateRecordsetColors(index);
+            }
+        }, onDelete: function (id) {
+            let length = $('.recordset').length;
+            if (length > 0) {
+                for (let index = 1; index <= length; index++) {
+                    alternateRecordsetColors(index);
+                }
+
+            }
         }
     });
 

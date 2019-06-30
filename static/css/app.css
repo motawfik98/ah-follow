@@ -81,3 +81,11 @@ html {
 .navbar #btnInstall {
     background: url(../PWA/images/install.svg) center center no-repeat;
 }
+
+.recordset.even {
+    background-color: #ffffff;
+}
+
+.recordset.odd {
+    background-color: #f6f6f6;
+}

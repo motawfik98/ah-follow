@@ -93,10 +93,6 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                     }
 
                     obj.siblings("input[name$='czMore_txtCount']").val(i);
-
-                    $(".modal").animate({scrollTop: $(".modal").height()}, "slow");
-
-
                     return false;
                 });
                 recordset.remove();
