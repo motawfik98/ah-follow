@@ -90,3 +90,20 @@ func getFlashMessages(c *echo.Context) (string, string) {
 	deleteSession(sess, *c) // deletes the session with name `flash` to avoid taking it once more in the future
 	return status, message  // returns the status and message
 }
+
+// this function returns the status and message of the flash message if found
+func getFormData(c *echo.Context, names []string) map[string]string {
+	sess, _ := session.Get("formData", *c) // gets the session with name `flash`
+	values := make(map[string]string, len(names))
+	for _, name := range names {
+		flash := sess.Flashes(name)
+		if len(flash) > 0 {
+			values[name] = flash[0].(string)
+		} else {
+			values[name] = ""
+		}
+	}
+
+	deleteSession(sess, *c) // deletes the session with name `formData` to avoid taking it once more in the future
+	return values           // returns the status and message
+}

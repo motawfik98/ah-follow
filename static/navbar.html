@@ -3,6 +3,9 @@
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark justify-content-end mb-3">
         <a class="navbar-brand" href="/">الرئيسيه</a>
         <div class="ml-auto mr-1 text-white">{{.username}}</div>
+        <a href="/user-settings">
+            <button id="btnSettings" aria-label="Settings"></button>
+        </a>
         <button id="btnInstall" aria-label="Install" hidden></button>
         <button id="btnRefresh" aria-label="Refresh"></button>
         <a href="/logout" class="btn btn-success">تسجيل خروج</a>

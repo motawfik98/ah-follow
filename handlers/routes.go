@@ -32,4 +32,11 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	notifications.POST("/register", db.registerClientToNotify)
 	e.GET("/service-worker.js", serveServiceWorkerFile)
 	e.GET("/js/dataTables.editor.js", serveDataTablesEditorFile)
+
+	e.GET("/user-settings", db.showSettingsPage, ensureLoggedIn)
+
+	e.GET("/send-verification-code", db.sendVerificationCode, ensureLoggedIn)
+	e.POST("/change-phone-number", db.changePhoneNumber, ensureLoggedIn)
+	e.POST("/verify-phone-number", db.verifyPhoneNumber, ensureLoggedIn)
+
 }

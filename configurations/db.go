@@ -13,6 +13,7 @@ func InitDB() (*gorm.DB, error) {
 		db.AutoMigrate(&models.User{}, &models.Task{}) // migrate the required tables (structs)
 		db.AutoMigrate(&models.FollowingUserTask{}, &models.WorkingOnUserTask{}, &models.Subscription{})
 		db.AutoMigrate(&models.File{}).AddForeignKey("task_id", "tasks(id)", "CASCADE", "CASCADE")
+		db.AutoMigrate(&models.OTP{})
 		//db = db.Set("gorm:auto_preload", true)
 	}
 	return db, err

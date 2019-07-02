@@ -1,0 +1,135 @@
+{{ define "user-settings.html"}}
+    {{template "header".}}
+    <div class="row m-auto justify-content-center">
+        <aside class="col-sm-6">
+            <div class="card">
+                <article class="card-body">
+                    <h4 class="card-title mb-4 mt-1">بيانات المستخدم</h4>
+                    <div class="form-group">
+                        <label for="disabled-phone-number" class="d-block">رقم الهاتف</label>
+                        <input type="text" name="phoneNumber" class="form-control col-10 d-inline"
+                               placeholder="رقم الهاتف" readonly disabled id="disabled-phone-number"
+                               value="{{.phoneNumber}}">
+                        <button class="btn btn-secondary" data-toggle="modal" data-target="#phoneNumberModal">تغيير
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="email" class="d-block">البريد الالكتروني</label>
+                        <input type="email" name="email" class="form-control col-10 d-inline"
+                               placeholder="البريد الالكتروني" readonly disabled
+                               id="email" value="{{.email}}">
+                        <button class="btn btn-secondary">تغيير</button>
+                    </div>
+                    <div class="form-group">
+                        <a href="/" class="btn btn-secondary btn-block">رجوع</a>
+                    </div> <!-- form-group// -->
+                </article>
+            </div>
+        </aside>
+    </div>
+
+
+    <div class="modal fade" id="phoneNumberModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLongTitle">تغيير رقم الهاتف</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label for="phone-number" class="d-block">رقم الهاتف</label>
+                    <input type="text" name="phoneNumber" class="form-control col-10 d-inline"
+                           placeholder="رقم الهاتف"
+                           minlength="11" maxlength="11" id="phone-number" value="{{.phoneNumber}}"
+                           pattern="[0-9]{11}"
+                           oninvalid="this.setCustomValidity('يجب ان يكون الرقم مكون من 11 رقم')"
+                           onchange="this.setCustomValidity('')">
+
+                    <div class="invalid-feedback">
+                        يجب ان يكون الرقم مكون من 11 رقم
+                    </div>
+                    <button type="submit" class="btn btn-primary" onclick="changePhoneNumber()">حفظ الرقم</button>
+                    <div id="phone-feedback" class="flash"></div>
+
+                    <div class="row-fluid col-xs-12 {{ if .validPhoneNumber}}d-none{{end}}"
+                         data-content="step_content" id="phone-verification"
+                         data-url="/Verification/Confirm">
+
+                        <fieldset data-ui-type="verification_confirm">
+                            <div class="well well-large">تفعيل رقم الهاتف</div>
+
+                            <div class="control-group form-group">
+
+                                <label class="control-label col-sm-3 d-block" for="verification-code">كود
+                                    التفعيل</label>
+                                <div class="controls">
+                                    <input class="form-control input-validation-error col-10 d-inline"
+                                           id="verification-code"
+                                           type="text" placeholder="الكود">
+                                    <button class="btn btn-secondary" onclick="verifyCode()">تفعيل</button>
+                                    <div class="flash" id="validation-feedback"></div>
+                                    <div class="help-block  muted ">
+                                        برجاء ادخال كود التفعيل
+                                    </div>
+                                    <div class="help-inline muted hideresendverification">
+                                        <button type="submit" class="btn btn-danger" id="resend-verification-code"
+                                                onclick="sendVerificationCode()">
+                                            ارسال الكود مره اخري
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-group form-group messagesentwarning">
+
+                                <div class="controls col-sm-offset-3 col-sm-9">
+                                    <div class="alert alert-block alert-info">
+                                        لقد تم ارسال كود التفعيل لو لم يصلك تأكد من رقمك او انتظر قليلا
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">رجوع</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function changePhoneNumber() {
+            $.post("/change-phone-number", {
+                phoneNumber: $('#phone-number').val()
+            }, function (data) {
+                $('#phone-feedback').addClass(data["status"]).text(data["message"]);
+                if (data["status"] === "success") {
+                    $('#phone-verification').removeClass("d-none");
+                }
+            })
+        }
+
+        function verifyCode() {
+            $.post("/verify-phone-number", {
+                verificationCode: $('#verification-code').val()
+            }, function (data) {
+                if (data["status"] === "success") {
+                    location.reload();
+                }
+                $('#validation-feedback').addClass(data["status"]).text(data["message"]);
+            })
+        }
+
+        function sendVerificationCode() {
+            $.get("/send-verification-code", function (data) {
+                $('#validation-feedback').addClass(data["status"]).text(data["message"]);
+            })
+        }
+    </script>
+    {{template "footer".}}
+{{end}}

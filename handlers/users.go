@@ -151,13 +151,30 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 	return c.Redirect(http.StatusFound, "/") // redirect to the index page
 }
 
-// this function redirect the user to a url with flash status and message
-func redirectWithFlashMessage(status string, message string, url string, c *echo.Context) error {
+func redirectWithFormData(names, values []string, url, status, message string, c *echo.Context) error {
 	sess := getSession("flash", c)
 	sess.AddFlash(status, "status")
 	sess.AddFlash(message, "message")
 	_ = sess.Save((*c).Request(), (*c).Response())
+	sess = getSession("formData", c)
+	for index := range names {
+		sess.AddFlash(values[index], names[index])
+	}
+	_ = sess.Save((*c).Request(), (*c).Response())
 	return (*c).Redirect(http.StatusFound, url)
+}
+
+// this function redirect the user to a url with flash status and message
+func redirectWithFlashMessage(status string, message string, url string, c *echo.Context) error {
+	addFlashMessage(status, message, c)
+	return (*c).Redirect(http.StatusFound, url)
+}
+
+func addFlashMessage(status, message string, c *echo.Context) {
+	sess := getSession("flash", c)
+	sess.AddFlash(status, "status")
+	sess.AddFlash(message, "message")
+	_ = sess.Save((*c).Request(), (*c).Response())
 }
 
 // this function adds a cookie to the browser, adding in it the user_id and weather or not he's an admin

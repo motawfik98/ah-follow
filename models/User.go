@@ -14,6 +14,9 @@ type User struct {
 	FollowingUserTasks []*FollowingUserTask `gorm:"PRELOAD:false"`
 	WorkingOnUserTasks []*WorkingOnUserTask `gorm:"PRELOAD:false"`
 	Subscriptions      []*Subscription      `gorm:"PRELOAD:false"`
+	PhoneNumber        string
+	ValidPhoneNumber   bool `gorm:"default:0"`
+	Email              string
 }
 
 // this function updates the Hash and Admin column of the user after create

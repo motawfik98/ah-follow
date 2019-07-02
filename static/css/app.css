@@ -12,6 +12,10 @@ div.modal-dialog {
     max-width: initial;
 }
 
+div.modal-dialog.custom-modal {
+    max-width: none;
+}
+
 div.DTE_Field_Type_textarea textarea {
     padding: 3px;
     width: 100%;
@@ -75,11 +79,15 @@ html {
 }
 
 .navbar #btnRefresh {
-    background: url(../PWA/images/refresh.svg) center center no-repeat;
+    background: url(../img/refresh.svg) center center no-repeat;
 }
 
 .navbar #btnInstall {
-    background: url(../PWA/images/install.svg) center center no-repeat;
+    background: url(../img/install.svg) center center no-repeat;
+}
+
+.navbar #btnSettings {
+    background: url(../img/settings.svg) center center no-repeat;
 }
 
 .recordset.even {
