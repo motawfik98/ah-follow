@@ -8,13 +8,10 @@
     color: #f2e2e2;
 }
 
-div.modal-dialog {
+.DTED div.modal-dialog {
     max-width: initial;
 }
 
-div.modal-dialog.custom-modal {
-    max-width: none;
-}
 
 div.DTE_Field_Type_textarea textarea {
     padding: 3px;

@@ -41,12 +41,8 @@
                 </div>
                 <div class="modal-body">
                     <label for="phone-number" class="d-block">رقم الهاتف</label>
-                    <input type="text" name="phoneNumber" class="form-control col-10 d-inline"
-                           placeholder="رقم الهاتف"
-                           minlength="11" maxlength="11" id="phone-number" value="{{.phoneNumber}}"
-                           pattern="[0-9]{11}"
-                           oninvalid="this.setCustomValidity('يجب ان يكون الرقم مكون من 11 رقم')"
-                           onchange="this.setCustomValidity('')">
+                    <input type="text" name="phoneNumber" class="form-control col-9 d-inline"
+                           placeholder="رقم الهاتف" id="phone-number" value="{{.phoneNumber}}">
 
                     <div class="invalid-feedback">
                         يجب ان يكون الرقم مكون من 11 رقم
@@ -66,7 +62,7 @@
                                 <label class="control-label col-sm-3 d-block" for="verification-code">كود
                                     التفعيل</label>
                                 <div class="controls">
-                                    <input class="form-control input-validation-error col-10 d-inline"
+                                    <input class="form-control input-validation-error col-9 d-inline"
                                            id="verification-code"
                                            type="text" placeholder="الكود">
                                     <button class="btn btn-secondary" onclick="verifyCode()">تفعيل</button>
@@ -84,7 +80,7 @@
                             </div>
                             <div class="control-group form-group messagesentwarning">
 
-                                <div class="controls col-sm-offset-3 col-sm-9">
+                                <div class="controls col-sm-offset-3">
                                     <div class="alert alert-block alert-info">
                                         لقد تم ارسال كود التفعيل لو لم يصلك تأكد من رقمك او انتظر قليلا
                                     </div>
