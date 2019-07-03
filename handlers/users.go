@@ -43,7 +43,7 @@ func (db *MyDB) performLogin(c echo.Context) error {
 		return redirectWithFlashMessage("failure", "بيانات الدخول ليست صحيحه", "/login", &c)
 	} else {
 		// login successfully, add cookie to browser
-		err := addSession(&c, user.ID, user.Classification)
+		err := addSession(&c, user.ID, user.Classification, user.Username)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 		return redirectWithFlashMessage("failure", "تم تسجيل هذا المستخدم من قبل", "/signup", &c)
 	}
 	// if we reached here, then the user is successfully signed up and he's ready to sign in
-	err := addSession(&c, user.ID, user.Classification) // add cookie to browser
+	err := addSession(&c, user.ID, user.Classification, user.Username) // add cookie to browser
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10) // hash the password that the user entered
 	user.Password = string(hashedPassword)                                 // sets the password to the hashed password
 	db.GormDB.Save(&user)                                                  // update the user in the database
-	err := addSession(&c, user.ID, user.Classification)                    // add a cookie to the browser to log the user in
+	err := addSession(&c, user.ID, user.Classification, user.Username)     // add a cookie to the browser to log the user in
 	if err != nil {
 		return err
 	}
@@ -178,10 +178,19 @@ func addFlashMessage(status, message string, c *echo.Context) {
 }
 
 // this function adds a cookie to the browser, adding in it the user_id and weather or not he's an admin
-func addSession(context *echo.Context, id uint, classification int) error {
+func addSession(context *echo.Context, id uint, classification int, username string) error {
 	sess := getSession("authorization", context)
 	sess.Values["user_id"] = id
 	sess.Values["classification"] = classification
+	sess.Values["username"] = username
+	if classification == 1 {
+		sess.Values["stringClassification"] = "الوزير"
+	} else if classification == 2 {
+		sess.Values["stringClassification"] = "متابع"
+	} else {
+		sess.Values["stringClassification"] = "قائم به"
+	}
+
 	return sess.Save((*context).Request(), (*context).Response())
 }
 

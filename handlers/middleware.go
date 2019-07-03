@@ -69,6 +69,11 @@ func getUserStatus(c *echo.Context) (uint, int) {
 	return sess.Values["user_id"].(uint), sess.Values["classification"].(int)
 }
 
+func getUsernameAndClassification(c *echo.Context) (string, string) {
+	sess := getSession("authorization", c)
+	return sess.Values["username"].(string), sess.Values["stringClassification"].(string)
+}
+
 // this function deletes the session cookie from the browser (useful in logout)
 func deleteSession(sess *sessions.Session, c echo.Context) {
 	sess.Options = &sessions.Options{

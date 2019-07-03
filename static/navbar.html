@@ -1,13 +1,28 @@
 {{ define "navbar" }}
 
-    <nav class="navbar navbar-expand-sm bg-dark navbar-dark justify-content-end mb-3">
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark justify-content-end mb-3">
         <a class="navbar-brand" href="/">الرئيسيه</a>
-        <div class="ml-auto mr-1 text-white">{{.username}}</div>
-        <a href="/user-settings">
-            <button id="btnSettings" aria-label="Settings"></button>
-        </a>
-        <button id="btnInstall" aria-label="Install" hidden></button>
-        <button id="btnRefresh" aria-label="Refresh"></button>
+        <div class="ml-auto mr-1 text-white">{{.username}} ({{.stringClassification}})</div>
         <a href="/logout" class="btn btn-success">تسجيل خروج</a>
+
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse flex-grow-0" id="navbarSupportedContent">
+            <ul class="navbar-nav text-right">
+                <li>
+                    <a href="/user-settings">
+                        <button id="btnSettings" class="navbar-img-btn" aria-label="Settings"></button>
+                    </a>
+                </li>
+                <li>
+                    <button id="btnInstall" class="navbar-img-btn" aria-label="Install" hidden></button>
+                </li>
+                <li>
+                    <button id="btnRefresh" class="navbar-img-btn" aria-label="Refresh"></button>
+                </li>
+            </ul>
+        </div>
     </nav>
+
 {{end}}

@@ -9,7 +9,7 @@ import (
 // this function serves the index page of the program
 func (db *MyDB) index(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // get the user ID and the classification int from the cookie that is stored
-	var usernameArr []string
+	username, stringClassification := getUsernameAndClassification(&c)
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
 	var followingUsers []models.User
 	var workingOnUsers []models.User
@@ -18,17 +18,16 @@ func (db *MyDB) index(c echo.Context) error {
 	// get the workingOnUsers ordered by the [order] column
 	db.GormDB.Preload("WorkingOnUserTasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
 
-	db.GormDB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &usernameArr)
-	username := usernameArr[0]
 	return c.Render(http.StatusOK, "index.html", echo.Map{
-		"title":          "الرئيسية",     // sets the title of the page
-		"status":         status,         // pass the status of the flash message
-		"message":        message,        // pass the message
-		"followingUsers": followingUsers, // pass the followingUsers array
-		"workingOnUsers": workingOnUsers, // pass the workingOnUsers array
-		"classification": classification, // pass the classification variable to use in JS
-		"userID":         userID,         // pass the userID
-		"username":       username,       // pass the username
+		"title":                "الرئيسية",     // sets the title of the page
+		"status":               status,         // pass the status of the flash message
+		"message":              message,        // pass the message
+		"followingUsers":       followingUsers, // pass the followingUsers array
+		"workingOnUsers":       workingOnUsers, // pass the workingOnUsers array
+		"classification":       classification, // pass the classification variable to use in JS
+		"userID":               userID,         // pass the userID
+		"username":             username,       // pass the username
+		"stringClassification": stringClassification,
 	})
 }
 

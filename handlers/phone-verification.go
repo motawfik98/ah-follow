@@ -16,6 +16,7 @@ import (
 // this function serves the userSettings page
 func (db *MyDB) showSettingsPage(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
+	username, stringClassification := getUsernameAndClassification(&c)
 	var user models.User
 	db.GormDB.First(&user, userID)
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
@@ -23,19 +24,17 @@ func (db *MyDB) showSettingsPage(c echo.Context) error {
 	activatedPhoneNumber := user.ValidPhoneNumber
 	email := user.Email
 
-	var usernameArr []string
-	db.GormDB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &usernameArr)
-	username := usernameArr[0]
 	return c.Render(http.StatusOK, "user-settings.html", echo.Map{
-		"status":           status,               // pass the status of the flash message
-		"message":          message,              // pass the message
-		"phoneNumber":      phoneNumber,          // pass the phone number
-		"validPhoneNumber": activatedPhoneNumber, // pass if the number is activated or not
-		"email":            email,                // pass the email
-		"title":            "بيانات المستخدم",    // the title of the page
-		"buttonText":       "حفظ",                // the action button text the should be displayed to the user
-		"formAction":       "/save-settings",     // the URL that the form should be submitted to
-		"username":         username,             // pass the username
+		"status":               status,               // pass the status of the flash message
+		"message":              message,              // pass the message
+		"phoneNumber":          phoneNumber,          // pass the phone number
+		"validPhoneNumber":     activatedPhoneNumber, // pass if the number is activated or not
+		"email":                email,                // pass the email
+		"title":                "بيانات المستخدم",    // the title of the page
+		"buttonText":           "حفظ",                // the action button text the should be displayed to the user
+		"formAction":           "/save-settings",     // the URL that the form should be submitted to
+		"username":             username,             // pass the username
+		"stringClassification": stringClassification,
 	})
 }
 
