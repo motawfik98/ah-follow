@@ -21,20 +21,27 @@ func (db *MyDB) showSettingsPage(c echo.Context) error {
 	db.GormDB.First(&user, userID)
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
 	phoneNumber := user.PhoneNumber
-	activatedPhoneNumber := user.ValidPhoneNumber
+	var hidePhoneVerification, hideEmailVerification bool
+	if len(phoneNumber) == 0 || user.ValidPhoneNumber {
+		hidePhoneVerification = true
+	}
 	email := user.Email
+	if len(email) == 0 || user.ValidEmail {
+		hideEmailVerification = true
+	}
 
 	return c.Render(http.StatusOK, "user-settings.html", echo.Map{
-		"status":               status,               // pass the status of the flash message
-		"message":              message,              // pass the message
-		"phoneNumber":          phoneNumber,          // pass the phone number
-		"validPhoneNumber":     activatedPhoneNumber, // pass if the number is activated or not
-		"email":                email,                // pass the email
-		"title":                "بيانات المستخدم",    // the title of the page
-		"buttonText":           "حفظ",                // the action button text the should be displayed to the user
-		"formAction":           "/save-settings",     // the URL that the form should be submitted to
-		"username":             username,             // pass the username
-		"stringClassification": stringClassification,
+		"status":                status,                // pass the status of the flash message
+		"message":               message,               // pass the message
+		"phoneNumber":           phoneNumber,           // pass the phone number
+		"hidePhoneVerification": hidePhoneVerification, // pass if the number is activated or not
+		"email":                 email,                 // pass the email
+		"hideEmailVerification": hideEmailVerification, // pass if the email is activated or not
+		"title":                 "بيانات المستخدم",     // the title of the page
+		"buttonText":            "حفظ",                 // the action button text the should be displayed to the user
+		"formAction":            "/save-settings",      // the URL that the form should be submitted to
+		"username":              username,              // pass the username
+		"stringClassification":  stringClassification,
 	})
 }
 
@@ -83,6 +90,7 @@ func (db *MyDB) sendVerificationCode(c echo.Context) error {
 		UserID:           userID,
 		PhoneNumber:      user.PhoneNumber,
 		VerificationCode: code,
+		Type:             "phone number",
 	}
 	db.GormDB.Create(&otp)
 	message := generateUTF16Message("كود التفعيل الخاص بالهاتف هو " + code) // gets the UTF-16 encoding
@@ -129,22 +137,13 @@ func sendMessage(phoneNumber, message string) {
 func (db *MyDB) verifyPhoneNumber(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
-	var otps []models.OTP
+	var otp models.OTP
 	db.GormDB.First(&user, userID)
-	db.GormDB.Where("user_id = ? AND phone_number = ?", userID, user.PhoneNumber).Find(&otps) // get all the not deleted OTPs from the database for that specific user and number
-	verificationCode := c.FormValue("verificationCode")                                       // gets the submitted verification code
-	verified := false
-	for _, otp := range otps { // loop through all the verification codes
-		if otp.VerificationCode == verificationCode { // if a match was found
-			verified = true
-			db.GormDB.Model(&otp).Update("used", true)                                                          // update the table to know which OTP is used
-			db.GormDB.Model(&user).Update("valid_phone_number", true)                                           // update the phone number to be verified
-			db.GormDB.Where("user_id = ? AND phone_number = ?", userID, user.PhoneNumber).Delete(&models.OTP{}) // delete all the OTPs for that phone number
-			break
-		}
-	}
+	verificationCode := c.FormValue("verificationCode")                                                                                  // gets the submitted verification code
+	db.GormDB.Where("user_id = ? AND phone_number = ? AND verification_code = ?", userID, user.PhoneNumber, verificationCode).Find(&otp) // get all the not deleted OTP from the database for that specific user, number, and verification code
+
 	var status, returnMessage string
-	if verified { // if the number was successfully verified
+	if otp.ID != 0 { // if the number was successfully verified
 		addFlashMessage("success", "تم تفعيل رقم الهاتف", &c) // inform the user that the number is verified
 		status = "success"
 	} else {

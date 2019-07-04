@@ -17,6 +17,7 @@ type User struct {
 	PhoneNumber        string
 	ValidPhoneNumber   bool `gorm:"default:0"`
 	Email              string
+	ValidEmail         bool `gorm:"default:0"`
 }
 
 // this function updates the Hash and Admin column of the user after create

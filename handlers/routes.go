@@ -39,4 +39,8 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.POST("/change-phone-number", db.changePhoneNumber, ensureLoggedIn)
 	e.POST("/verify-phone-number", db.verifyPhoneNumber, ensureLoggedIn)
 
+	e.GET("/send-verification-link", db.sendVerificationLink, ensureLoggedIn)
+	e.POST("/change-email", db.changeEmail, ensureLoggedIn)
+	e.GET("/verify-email", db.verifyEmail, ensureLoggedIn)
+
 }
