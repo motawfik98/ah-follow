@@ -144,6 +144,9 @@ func (db *MyDB) verifyPhoneNumber(c echo.Context) error {
 
 	var status, returnMessage string
 	if otp.ID != 0 { // if the number was successfully verified
+		db.GormDB.Model(&user).Update("valid_phone_number", true)
+		db.GormDB.Model(&otp).Update("used", true)
+		db.GormDB.Where("user_id = ? AND phone_number = ?", userID, user.PhoneNumber).Delete(models.OTP{})
 		addFlashMessage("success", "تم تفعيل رقم الهاتف", &c) // inform the user that the number is verified
 		status = "success"
 	} else {

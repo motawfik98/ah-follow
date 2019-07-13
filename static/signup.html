@@ -6,7 +6,7 @@
         <aside class="col-sm-6">
             <div class="card">
                 <article class="card-body">
-                    <h4 class="card-title mb-4 mt-1">مستخدم جديد</h4>
+                    <h4 class="card-title mb-4 mt-1">{{.title}}</h4>
                     <form action="{{.formAction}}" method="post">
                         <div class="form-group">
                             <label for="username">اسم المستخدم</label>
@@ -19,6 +19,7 @@
                                 </select>
                             {{else}}
                                 <input type="text" name="username" class="form-control" id="username"
+                                       value="{{.username}}"
                                        placeholder="اسم المستخدم">
                             {{end}}
                         </div>
@@ -47,9 +48,12 @@
                             <div class="form-group">
                                 <label for="classification">التصنيف</label>
                                 <select class="form-control" id="classification" name="classification">
-                                    <option value="1">الوزير</option>
-                                    <option value="2">متابع</option>
-                                    <option value="3" selected>قائم به</option>
+                                    <option value="1" {{if eq .classification "1"}}selected{{end}}>الوزير</option>
+                                    <option value="2" {{if eq .classification "2"}}selected{{end}}>متابع</option>
+                                    <option value="3"
+                                            {{if or (eq .classification "") (eq .classification "3")}}selected{{end}}>
+                                        قائم به
+                                    </option>
 
                                 </select>
                             </div>
@@ -57,11 +61,27 @@
                         <button type="submit" class="btn btn-primary">{{.buttonText}}</button>
                         <a href="/login">مسجل بالبرنامج ؟</a>
                     </form>
+                    {{if .resetPage}}
+                        <button class="btn btn-dark mt-3" onclick="changeByEmail()">تغيير كلمه السر بواسطه البريد
+                            الالكتروني
+                        </button>
+                    {{end}}
                 </article>
             </div> <!-- card.// -->
 
         </aside> <!-- col.// -->
     </div> <!-- row.// -->
+
+    <script>
+        function changeByEmail() {
+            $.get("/reset-password-by-email", {
+                username: $("#username").val()
+            }, function (data) {
+                if (data["status"] === "reload")
+                    location.reload();
+            })
+        }
+    </script>
 
 
     {{template "footer".}}

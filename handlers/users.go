@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type MyDB struct {
@@ -55,6 +56,7 @@ func (db *MyDB) performLogin(c echo.Context) error {
 // this function serves the signUp page
 func showSignUpPage(c echo.Context) error {
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
+	formFields := getFormData(&c, []string{"username", "classification"})
 	return c.Render(http.StatusOK, "signup.html", echo.Map{
 		"status":                   status,                                                                 // pass the status of the flash message
 		"message":                  message,                                                                // pass the message
@@ -65,19 +67,26 @@ func showSignUpPage(c echo.Context) error {
 		"adminPasswordPlaceholder": "كلمه السر الخاصه بالوزير",                                             // string that should be shown in the admin password input placeholder
 		"adminPasswordHelp":        "هذا الحقل خاص بالوزير, ولا يمكن ان تضيف مستخدم جديد الا بالرجوع اليه", // some helper text for the admin password field
 		"isSignUp":                 true,
+		"username":                 formFields["username"],
+		"classification":           formFields["classification"],
 	})
 }
 
 // this function performs the signUp logic
 func (db *MyDB) performSignUp(c echo.Context) error {
-	username := c.FormValue("username")                              // gets the username from the form submitted data
-	password := c.FormValue("password")                              // gets the password from the form submitted data
-	classification, _ := strconv.Atoi(c.FormValue("classification")) // gets the classification from the form submitted data
-	passwordVerify := c.FormValue("passwordVerify")                  // gets the password verification from the form submitted data
-	adminPassword := c.FormValue("adminPassword")                    // gets the admin's password (or administrator's password) from the form submitted data
-	if password != passwordVerify {                                  // checks that the password is equal to the password verification
+	username := strings.TrimSpace(c.FormValue("username"))             // gets the username from the form submitted data
+	password := strings.TrimSpace(c.FormValue("password"))             // gets the password from the form submitted data
+	classification, _ := strconv.Atoi(c.FormValue("classification"))   // gets the classification from the form submitted data
+	passwordVerify := strings.TrimSpace(c.FormValue("passwordVerify")) // gets the password verification from the form submitted data
+	adminPassword := strings.TrimSpace(c.FormValue("adminPassword"))   // gets the admin's password (or administrator's password) from the form submitted data
+	if len(username) == 0 || len(password) == 0 {
+		return redirectWithFormData([]string{"username", "classification"}, []string{username, string(classification)},
+			"/signup", "failure", "يجب تحديد اسم المستخدم وكلمه السر", &c)
+	}
+	if password != passwordVerify { // checks that the password is equal to the password verification
 		// if not, redirect to /signup with failure flash message
-		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", "/signup", &c)
+		return redirectWithFormData([]string{"username", "classification"}, []string{username, string(classification)},
+			"/signup", "failure", "كلمه السر ليست متطابقه", &c)
 	}
 	var admin models.User
 	db.GormDB.First(&admin, "classification = 1")                // gets from the database where `admin` column is set to one
@@ -85,7 +94,8 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 	// checks if the adminPassword field is equal to the administrator's password OR its hash is equal to the one stored in the database
 	if !(adminPassword == administratorPassword || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil) {
 		// if not, redirect the user to /signup with a failure flash message
-		return redirectWithFlashMessage("failure", "كلمه السر الخاصه ليست صحيحه", "/signup", &c)
+		return redirectWithFormData([]string{"username", "classification"}, []string{username, string(classification)},
+			"/signup", "failure", "كلمه السر الخاصه ليست صحيحه", &c)
 	}
 	// all conditions are met and we're ready to store the user to the database
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10) // hash the password that the user entered
@@ -95,7 +105,8 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 	if len(databaseError) > 0 {                          // checks for database errors
 		// if found, then it mainly will be because of the unique key index of the username
 		// redirect the user to /signup with failure flash message
-		return redirectWithFlashMessage("failure", "تم تسجيل هذا المستخدم من قبل", "/signup", &c)
+		return redirectWithFormData([]string{"username", "classification"}, []string{username, string(classification)},
+			"/signup", "failure", "تم تسجيل هذا المستخدم من قبل", &c)
 	}
 	// if we reached here, then the user is successfully signed up and he's ready to sign in
 	err := addSession(&c, user.ID, user.Classification, user.Username) // add cookie to browser
@@ -109,6 +120,7 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 func (db *MyDB) showResetPasswordUpPage(c echo.Context) error {
 	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
 	users := models.GetAllUsers(db.GormDB)  // gets all the users that are in the database
+	formFields := getFormData(&c, []string{"username"})
 	return c.Render(http.StatusOK, "signup.html", echo.Map{
 		"status":                   status,                                                                        // pass the status of the flash message
 		"message":                  message,                                                                       // pass the message
@@ -119,26 +131,85 @@ func (db *MyDB) showResetPasswordUpPage(c echo.Context) error {
 		"formAction":               "/reset-password",                                                             // the URL that the form should be submitted to
 		"adminPasswordPlaceholder": "كلمه السر الخاصه بالوزير (او القديمه)",                                       // string that should be shown in the admin password input placeholder
 		"adminPasswordHelp":        "يجب ادخال كلمه السر الخاصه بالوزير (او كلمه السر القديمه) لتتمكن من تغييرها", // some helper text for the admin password field
+		"username":                 formFields["username"],
+		"resetPage":                true,
 	})
 }
 
+// this function serves the resetPassword page
+func (db *MyDB) showResetPasswordByEmailPage(c echo.Context) error {
+	status, message := getFlashMessages(&c) // gets the flash message and status if there was any
+	email := c.QueryParam("email")
+	hash := c.QueryParam("hash")
+	var otp models.OTP
+	db.GormDB.Table("otps").First(&otp, "email = ? AND verification_code = ?", email, hash)
+	if otp.UserID == 0 {
+		return redirectWithFlashMessage("failure", "حدث خطأ ما برجاء اعاده المحاوله مره اخرى (او قم بأرسال البريد الالكتروني مره اخرى)", "/login", &c)
+	}
+	formAction := "/email-reset-password?email=" + email + "&hash=" + hash
+	return c.Render(http.StatusOK, "reset-password-by-email.html", echo.Map{
+		"status":     status,     // pass the status of the flash message
+		"message":    message,    // pass the message
+		"hideNavBar": true,       // boolean to indicate weather or not the NavBar should be displayed
+		"formAction": formAction, // the URL that the form should be submitted to
+	})
+}
+
+// this function serves the resetPassword page
+func (db *MyDB) performResetPasswordByEmail(c echo.Context) error {
+	email := c.QueryParam("email")
+	hash := c.QueryParam("hash")
+	url := "/email-reset-password?email=" + email + "&hash=" + hash
+	var otp models.OTP
+
+	password := strings.TrimSpace(c.FormValue("password"))
+	passwordVerify := strings.TrimSpace(c.FormValue("passwordVerify"))
+
+	if len(password) == 0 {
+		return redirectWithFlashMessage("failure", "يجب تحديد كيمه السر الجديده", url, &c)
+	}
+	if password != passwordVerify { // checks that the password is equal to the password verification
+		// if not, redirect to /reset-password-by-email with failure flash message
+		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", url, &c)
+	}
+
+	db.GormDB.Table("otps").First(&otp, "email = ? AND verification_code = ?", email, hash)
+	otp.Used = true
+	db.GormDB.Save(&otp)
+	db.GormDB.Where("email = ? AND user_id = ?", email, otp.UserID).Delete(models.OTP{})
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10) // hash the password that the user entered
+	db.GormDB.Model(&models.User{}).UpdateColumn("password", string(hashedPassword))
+
+	return redirectWithFlashMessage("success", "تم تغيير كلمه السر", "/login", &c)
+}
+
 func (db *MyDB) performResetPassword(c echo.Context) error {
-	username := c.FormValue("username")             // gets the username from the form submitted data
-	password := c.FormValue("password")             // gets the password from the form submitted data
-	passwordVerify := c.FormValue("passwordVerify") // gets the password verification from the form submitted data
-	adminPassword := c.FormValue("adminPassword")   // gets the admin's password (or administrator's password) from the form submitted data
-	if password != passwordVerify {                 // checks that the password is equal to the password verification
-		// if not, redirect to /signup with failure flash message
-		return redirectWithFlashMessage("failure", "كلمه السر ليست متطابقه", "/reset-password", &c)
+	username := strings.TrimSpace(c.FormValue("username"))             // gets the username from the form submitted data
+	password := strings.TrimSpace(c.FormValue("password"))             // gets the password from the form submitted data
+	passwordVerify := strings.TrimSpace(c.FormValue("passwordVerify")) // gets the password verification from the form submitted data
+	adminPassword := strings.TrimSpace(c.FormValue("adminPassword"))   // gets the admin's password (or administrator's password) from the form submitted data
+	if len(username) == 0 || len(password) == 0 {
+		return redirectWithFormData([]string{"username"}, []string{username},
+			"/reset-password", "failure", "يجب تحديد اسم المستخدم وكلمه السر", &c)
+	}
+	if password != passwordVerify { // checks that the password is equal to the password verification
+		// if not, redirect to /reset-password with failure flash message
+		return redirectWithFormData([]string{"username"}, []string{username},
+			"/reset-password", "failure", "كلمه السر ليست متطابقه", &c)
 	}
 	var admin, user models.User
 	db.GormDB.First(&admin, 1)
 	db.GormDB.Where("username = ?", username).First(&user) // gets the user where the username is equal to the entered username by the end user
+	if user.ID == 0 {
+		return redirectWithFormData([]string{"username"}, []string{username},
+			"/reset-password", "failure", "عفوا لم نتمكن من ايجاد المستخدم- برجاء التأكد من اسم المستخدم واعاده المحاوله", &c)
+	}
 	administratorPassword := os.Getenv("administrator_password")
 	if !(adminPassword == administratorPassword ||
 		bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil ||
 		bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(adminPassword)) == nil) {
-		return redirectWithFlashMessage("failure", "كلمه السر الخاصه ليست صحيحه", "/reset-password", &c)
+		return redirectWithFormData([]string{"username"}, []string{username},
+			"/reset-password", "failure", "كلمه السر الخاصه ليست صحيحه", &c)
 	}
 	// all conditions are met and we're ready to change the user's password
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10) // hash the password that the user entered
@@ -151,16 +222,48 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 	return c.Redirect(http.StatusFound, "/") // redirect to the index page
 }
 
-func redirectWithFormData(names, values []string, url, status, message string, c *echo.Context) error {
-	sess := getSession("flash", c)
-	sess.AddFlash(status, "status")
-	sess.AddFlash(message, "message")
-	_ = sess.Save((*c).Request(), (*c).Response())
-	sess = getSession("formData", c)
-	for index := range names {
-		sess.AddFlash(values[index], names[index])
+func (db *MyDB) resetPasswordByEmail(c echo.Context) error {
+	username := strings.TrimSpace(c.FormValue("username"))
+	if len(username) == 0 {
+		addFlashMessage("failure", "يجب تحديد اسم المستخدم", &c)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "reload",
+		})
 	}
-	_ = sess.Save((*c).Request(), (*c).Response())
+	var user models.User
+	db.GormDB.First(&user, "username = ?", username)
+	if user.ID == 0 {
+		addFormData([]string{"username"}, []string{username}, &c)
+		addFlashMessage("failure", "تأكد من صحه اسم المستخدم", &c)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "reload",
+		})
+	}
+	if user.ValidEmail == false {
+		addFormData([]string{"username"}, []string{username}, &c)
+		addFlashMessage("failure", "عفوا انت لم تقم بتفعيل البريد الالكتروني الخاص بك/ برجاء التواصل مع السؤول", &c)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "reload",
+		})
+	}
+	emailHash, link := generateHashAndPasswordResetLink(user.Email)
+	otp := models.OTP{
+		UserID:           user.ID,
+		Email:            user.Email,
+		VerificationCode: emailHash,
+		Type:             "email-password-reset",
+	}
+	db.GormDB.Create(&otp)
+	sendResetLink(&user, link)
+	addFlashMessage("success", "تم ارسال بريد الكتروني بالتعليمات لتغيير كلمه السر", &c)
+	return c.JSON(http.StatusOK, map[string]string{
+		"status": "reload",
+	})
+}
+
+func redirectWithFormData(names, values []string, url, status, message string, c *echo.Context) error {
+	addFlashMessage(status, message, c)
+	addFormData(names, values, c)
 	return (*c).Redirect(http.StatusFound, url)
 }
 
@@ -168,6 +271,14 @@ func redirectWithFormData(names, values []string, url, status, message string, c
 func redirectWithFlashMessage(status string, message string, url string, c *echo.Context) error {
 	addFlashMessage(status, message, c)
 	return (*c).Redirect(http.StatusFound, url)
+}
+
+func addFormData(names, values []string, c *echo.Context) {
+	sess := getSession("formData", c)
+	for index := range names {
+		sess.AddFlash(values[index], names[index])
+	}
+	_ = sess.Save((*c).Request(), (*c).Response())
 }
 
 func addFlashMessage(status, message string, c *echo.Context) {

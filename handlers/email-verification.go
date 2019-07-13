@@ -49,10 +49,10 @@ func (db *MyDB) sendVerificationLink(c echo.Context) error {
 		UserID:           userID,
 		Email:            user.Email,
 		VerificationCode: emailHash,
-		Type:             "email",
+		Type:             "email-verify",
 	}
 	db.GormDB.Create(&otp)
-	sendLink(&user, link)
+	sendVerificationLink(&user, link)
 	addFlashMessage("success", "تم ارسال البريد الالكتروني للتفعيل", &c)
 	return c.JSON(http.StatusOK, map[string]string{
 		"status": "success",
@@ -62,52 +62,39 @@ func (db *MyDB) sendVerificationLink(c echo.Context) error {
 func generateHashAndVerificationLink(email string) (string, string) {
 	var emailBuilder strings.Builder
 	emailBuilder.WriteString("http://localhost:8081/verify-email?email=" + email)
-	emailHash := models.GenerateEmailHash(email)
+	emailHash := models.GenerateEmailHash(email, "verification")
+	emailBuilder.WriteString("&hash=" + emailHash)
+	return emailHash, emailBuilder.String()
+}
+func generateHashAndPasswordResetLink(email string) (string, string) {
+	var emailBuilder strings.Builder
+	emailBuilder.WriteString("http://localhost:8081/email-reset-password?email=" + email)
+	emailHash := models.GenerateEmailHash(email, "password-reset")
 	emailBuilder.WriteString("&hash=" + emailHash)
 	return emailHash, emailBuilder.String()
 }
 
-func sendLink(user *models.User, verificationLink string) {
-	// Configure hermes by setting a theme and your product info
-	h := hermes.Hermes{
-		// Custom text direction
-		TextDirection: hermes.TDRightToLeft,
-		// Optional Theme
-		// Theme: new(Default)
-		Product: hermes.Product{
-			// Appears in header & footer of e-mails
-			Name: "التكاليف الوزاريه",
-			Link: "http://localhost:8081",
-			// Optional product logo
-			Logo: "https://i1.wp.com/doist.com/blog/wp-content/uploads/sites/3/2017/08/Ways-to-add-tasks-to-Todoist-.png?fit=2000%2C1000&quality=85&strip=all&ssl=1",
-			// Custom trouble text
-			TroubleText: "لو لم يعمل زر ال{ACTION} قم بالضغط على الرابط التالي",
-			// Custom copyright notice
-			Copyright: "Copyright © 2019 Eng. Ahmed Tawfik.",
-		},
-	}
-
+func generateHermesEmail(username, intro, actionInstruction, actionColor, actionText, actionLink string, h hermes.Hermes) (string, string) {
 	generatedEmail := hermes.Email{
 		Body: hermes.Body{
 			Greeting:  "اهلا",
 			Signature: "مع تحيات",
-			Name:      user.Username,
+			Name:      username,
 			Intros: []string{
-				"هذا البريد الالكتروني خاص بالتفعيل",
+				intro,
 			},
 			Actions: []hermes.Action{
 				{
-					Instructions: "لتفعيل البريد الالكتروني اضغط هنا",
+					Instructions: actionInstruction,
 					Button: hermes.Button{
-						Color: "#22BC66", // Optional action button color
-						Text:  "تفعيل",
-						Link:  verificationLink,
+						Color: actionColor, // Optional action button color
+						Text:  actionText,
+						Link:  actionLink,
 					},
 				},
 			},
 		},
 	}
-
 	// Generate an HTML email with the provided contents (for modern clients)
 	emailHTML, err := h.GenerateHTML(generatedEmail)
 	if err != nil {
@@ -119,10 +106,34 @@ func sendLink(user *models.User, verificationLink string) {
 		panic(err) // Tip: Handle error with something else than a panic ;)
 	}
 
+	return emailHTML, emailText
+}
+
+func generateHermesStruct() hermes.Hermes {
+	return hermes.Hermes{
+		// Custom text direction
+		TextDirection: hermes.TDRightToLeft,
+		// Optional Theme
+		// Theme: new(Default)
+		Product: hermes.Product{
+			// Appears in header & footer of e-mails
+			Name: "التكاليف الوزاريه",
+			Link: "http://localhost:8081",
+			// Optional product logo
+			Logo: "https://i1.wp.com/doist.com/blog/wp-content/uploads/sites/3/2017/08/Ways-to-add-tasks-to-Todoist-.png?fit=2000%2C1000&quality=85&strip=all&ssl=1",
+			// Custom trouble text
+			TroubleText: "لو لم يعمل زر \"{ACTION}\" قم بالضغط على الرابط التالي",
+			// Custom copyright notice
+			Copyright: "Copyright © 2019 Eng. Ahmed Tawfik.",
+		},
+	}
+}
+
+func sendEmail(userEmail, emailHTML, emailText, subject string) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", "takaleef@gmail.com")
-	m.SetHeader("To", user.Email)
-	m.SetHeader("Subject", "تفعيل البريد الالكتروني")
+	m.SetHeader("To", userEmail)
+	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", emailText)
 	m.AddAlternative("text/html", emailHTML)
 
@@ -131,6 +142,21 @@ func sendLink(user *models.User, verificationLink string) {
 	if err := d.DialAndSend(m); err != nil {
 		panic(err)
 	}
+}
+
+func sendVerificationLink(user *models.User, verificationLink string) {
+	// Configure hermes by setting a theme and your product info
+	h := generateHermesStruct()
+	emailHTML, emailText := generateHermesEmail(user.Username, "هذا البريد الالكتروني خاص بالتفعيل", "لتفعيل البريد الالكتروني اضغط هنا",
+		"#22BC66", "تفعيل", verificationLink, h)
+	sendEmail(user.Email, emailHTML, emailText, "تفعيل البريد الالكتروني")
+}
+
+func sendResetLink(user *models.User, resetLink string) {
+	h := generateHermesStruct()
+	emailHTML, emailText := generateHermesEmail(user.Username, "هذا البريد الالكتروني خاص بتغيير كلمه السر", "لتغيير كلمه السر اضغط هنا",
+		"#DC4D2F", "تغيير كلمه السر", resetLink, h)
+	sendEmail(user.Email, emailHTML, emailText, "تغيير كلمه السر")
 }
 
 func (db *MyDB) verifyEmail(c echo.Context) error {
@@ -148,6 +174,9 @@ func (db *MyDB) verifyEmail(c echo.Context) error {
 	}
 
 	if otp.ID != 0 { // if the number was successfully verified
+		db.GormDB.Model(&user).Update("valid_email", true)
+		db.GormDB.Model(&otp).Update("used", true)
+		db.GormDB.Where("user_id = ? AND email = ?", userID, user.Email).Delete(models.OTP{})
 		return redirectWithFlashMessage("success", "تم تفعيل البريد الالكتروني", "/user-settings", &c)
 	} else {
 		return redirectWithFlashMessage("failure", "عفوا حدث خطأ ما برجاء المحاوله مره اخري او اعاده ارسال رابط التفعيل", "user-settings", &c)

@@ -11,6 +11,7 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.GET("/signup", showSignUpPage, ensureNotLoggedIn)
 	e.POST("/signup", db.performSignUp, ensureNotLoggedIn)
 	e.GET("/reset-password", db.showResetPasswordUpPage, ensureNotLoggedIn)
+	e.GET("/reset-password-by-email", db.resetPasswordByEmail, ensureNotLoggedIn)
 	e.POST("/reset-password", db.performResetPassword, ensureNotLoggedIn)
 
 	e.GET("/logout", logout, ensureLoggedIn)
@@ -29,9 +30,9 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	tasks.GET("/file/:hash", db.showFile)
 
 	notifications := e.Group("/notifications")
-	notifications.POST("/register", db.registerClientToNotify)
-	e.GET("/service-worker.js", serveServiceWorkerFile)
-	e.GET("/js/dataTables.editor.js", serveDataTablesEditorFile)
+	notifications.POST("/register", db.registerClientToNotify, ensureLoggedInWithoutFlashMessage)
+	e.GET("/service-worker.js", serveServiceWorkerFile, ensureLoggedInWithoutFlashMessage)
+	e.GET("/js/dataTables.editor.js", serveDataTablesEditorFile, ensureLoggedInWithoutFlashMessage)
 
 	e.GET("/user-settings", db.showSettingsPage, ensureLoggedIn)
 
@@ -42,5 +43,8 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.GET("/send-verification-link", db.sendVerificationLink, ensureLoggedIn)
 	e.POST("/change-email", db.changeEmail, ensureLoggedIn)
 	e.GET("/verify-email", db.verifyEmail, ensureLoggedIn)
+
+	e.GET("/email-reset-password", db.showResetPasswordByEmailPage, ensureNotLoggedIn)
+	e.POST("/email-reset-password", db.performResetPasswordByEmail, ensureNotLoggedIn)
 
 }

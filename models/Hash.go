@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"github.com/speps/go-hashids"
+	"math/rand"
 	"time"
 )
 
@@ -17,10 +18,10 @@ func generateHash(ID int) string {
 	return e
 }
 
-func GenerateEmailHash(email string) string {
+func GenerateEmailHash(email, action string) string {
 	h := sha1.New()
 	currentTime := time.Now().String()
-	h.Write([]byte(email + currentTime))
+	h.Write([]byte(email + currentTime + action + string(rand.Intn(99999))))
 	hash := h.Sum(nil)
 	sha1String := hex.EncodeToString(hash)
 	return sha1String

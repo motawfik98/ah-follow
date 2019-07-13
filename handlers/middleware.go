@@ -37,6 +37,16 @@ func ensureLoggedIn(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func ensureLoggedInWithoutFlashMessage(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sess, _ := session.Get("authorization", c) // gets the session with name `authorization`
+		if sess.Values["user_id"] != nil {         // if the value of `user_id` is not null then there's logged in user
+			return next(c) // continue the request
+		}
+		return nil
+	}
+}
+
 // this function ensures that the request is coming from an admin user
 func ensureAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
