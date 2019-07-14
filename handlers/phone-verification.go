@@ -42,6 +42,10 @@ func (db *MyDB) showSettingsPage(c echo.Context) error {
 		"formAction":            "/save-settings",      // the URL that the form should be submitted to
 		"username":              username,              // pass the username
 		"stringClassification":  stringClassification,
+		"activatedPhoneNumber":  user.ValidPhoneNumber,
+		"activatedEmail":        user.ValidEmail,
+		"phoneNotifications":    user.PhoneNotifications,
+		"emailNotifications":    user.EmailNotifications,
 	})
 }
 
@@ -158,4 +162,39 @@ func (db *MyDB) verifyPhoneNumber(c echo.Context) error {
 		"status":  status,
 		"message": returnMessage,
 	})
+}
+
+func (db *MyDB) changeNotifications(c echo.Context) error {
+	userID, _ := getUserStatus(&c)
+	var user models.User
+	db.GormDB.Find(&user, userID)
+	notificationsType := c.FormValue("type")
+	notifications, _ := strconv.ParseBool(c.FormValue("notifications"))
+
+	if notificationsType == "phone" {
+		if notifications && !user.ValidPhoneNumber {
+			addFlashMessage("failure", "يجب تفعيل رقم الهاتف لأستقبال الاشعارات", &c)
+			return c.JSON(http.StatusOK, map[string]string{
+				"status": "reload",
+			})
+		}
+		db.GormDB.Model(&user).Updates(map[string]interface{}{"phone_notifications": notifications})
+		addFlashMessage("success", "لقد تم تنفيذ طلبك بنجاح", &c)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "reload",
+		})
+	} else if notificationsType == "email" {
+		if notifications && !user.ValidEmail {
+			addFlashMessage("failure", "يجب تفعيل البريد الالكتروني لأستقبال الاشعارات", &c)
+			return c.JSON(http.StatusOK, map[string]string{
+				"status": "reload",
+			})
+		}
+		db.GormDB.Model(&user).Updates(map[string]interface{}{"email_notifications": notifications})
+		addFlashMessage("success", "لقد تم تنفيذ طلبك بنجاح", &c)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "reload",
+		})
+	}
+	return nil
 }

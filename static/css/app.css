@@ -41,6 +41,10 @@ td.marked_as_unseen {
     background-color: tomato;
 }
 
+td.new_from_working_on_user {
+    background-color: #6c757d;
+}
+
 tr td.select-checkbox {
     width: 5%;
 }

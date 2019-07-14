@@ -47,4 +47,5 @@ func InitializeRoutes(e *echo.Echo, db *MyDB) {
 	e.GET("/email-reset-password", db.showResetPasswordByEmailPage, ensureNotLoggedIn)
 	e.POST("/email-reset-password", db.performResetPasswordByEmail, ensureNotLoggedIn)
 
+	e.GET("/change-notifications", db.changeNotifications, ensureLoggedIn)
 }

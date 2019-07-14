@@ -16,8 +16,10 @@ type User struct {
 	Subscriptions      []*Subscription      `gorm:"PRELOAD:false"`
 	PhoneNumber        string
 	ValidPhoneNumber   bool `gorm:"default:0"`
+	PhoneNotifications bool `gorm:"default:0"`
 	Email              string
 	ValidEmail         bool `gorm:"default:0"`
+	EmailNotifications bool `gorm:"default:0"`
 }
 
 // this function updates the Hash and Admin column of the user after create

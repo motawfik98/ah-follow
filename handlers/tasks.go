@@ -81,9 +81,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	}
 
 	var workingOnIDs []uint
-	if classification == 2 {
-		workingOnIDs = append(workingOnIDs, addWorkingOnUsers(c, db, taskID, userID)...)
-	}
+	workingOnIDs = append(workingOnIDs, addWorkingOnUsers(c, db, taskID, classification, userID)...)
 
 	if followersIDs == nil {
 		followersIDs = []uint{0}
@@ -120,7 +118,7 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 	return users
 }
 
-func addWorkingOnUsers(c echo.Context, db *MyDB, taskID int, followerID uint) []uint {
+func addWorkingOnUsers(c echo.Context, db *MyDB, taskID, classification int, followerID uint) []uint {
 	var ids []uint
 	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("data[totalWorkingOnUsers]"))
 	// gets the total number of people that should be called to take an action
@@ -138,11 +136,18 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, taskID int, followerID uint) []
 		db.GormDB.Where("user_id = ? AND task_id = ?", userID, taskID).Find(&userTask) // try to get the userTask with the same userID and task id
 		var id uint
 		if userTask.ID == 0 { // if not found create one
-			id = models.CreateWorkingOnUserTask(db.GormDB, uint(taskID), uint(uid), action, finalResponse, followerID)
+			if classification == 2 {
+				id = models.CreateWorkingOnUserTask(db.GormDB, uint(taskID), uint(uid), action, finalResponse, followerID)
+			}
 		} else { // if found edit his data
-			userTask.ActionTaken = action
-			userTask.FinalResponse = finalResponse
-			userTask.Notes = notes
+			if classification == 2 {
+				userTask.ActionTaken = action
+				userTask.FinalResponse = finalResponse
+			} else if classification == 3 {
+				userTask.Notes = notes
+				db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userTask.FollowerID).
+					Updates(map[string]interface{}{"new_from_working_on_user": true})
+			}
 			db.GormDB.Save(&userTask)
 			id = userTask.UserID
 		}
@@ -175,7 +180,8 @@ func (db *MyDB) ChangeUserSeen(c echo.Context) error {
 	if isFollower {
 		if seen {
 			db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
-				Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false})
+				Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false,
+					"new_from_minister": false, "new_from_working_on_user": false})
 		} else {
 			db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
 				Update("marked_as_unseen", true)
@@ -204,8 +210,17 @@ func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
 // this function gets the parameters of the datatable to send it to `GetAllTasks` function
 func (db *MyDB) GetTasks(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // gets the value of userID and classification
-	q := c.Request().URL.Query()                // gets the URL Query as a map
+	hash := c.QueryParam("hash")
+	var tasks []models.Task
+	var totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int
+	var files map[string]interface{}
+	q := c.Request().URL.Query() // gets the URL Query as a map
 	draw, _ := strconv.Atoi(q["draw"][0])
+	if hash != "" {
+		tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files = models.GetTask(hash, db.GormDB, classification, userID)
+		dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
+		return c.JSONPretty(http.StatusOK, dt, " ")
+	}
 	start, _ := strconv.Atoi(q["start"][0])                         // the start point of the current data set
 	length, _ := strconv.Atoi(q["length"][0])                       // number of records to display (page size)
 	sortedColumnNumber, _ := strconv.Atoi(q["order[0][column]"][0]) // column to which ordering should be applied
@@ -220,8 +235,14 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 	minDateSearch := q["min_date"][0] // the value of min_date search
 	maxDateSearch := q["max_date"][0] // the value of max_date search
 	retrieveType := q["retrieve"][0]  // the value of the retrieve type
-	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files := models.GetAllTasks(db.GormDB, start, length,
+	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files = models.GetAllTasks(db.GormDB, start, length,
 		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, classification, userID)
+	dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
+
+	return c.JSONPretty(http.StatusOK, dt, " ")
+}
+
+func generateDTOutput(tasks []models.Task, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int, files map[string]interface{}, draw int) dtOutput {
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,
@@ -229,8 +250,7 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 		Data:            tasks,
 		Files:           files,
 	}
-
-	return c.JSONPretty(http.StatusOK, dt, " ")
+	return dt
 }
 
 // struct to return the datatable rows in the correct format

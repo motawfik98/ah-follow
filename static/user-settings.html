@@ -5,22 +5,53 @@
             <div class="card">
                 <article class="card-body">
                     <h4 class="card-title mb-4 mt-1">بيانات المستخدم</h4>
-                    <div class="form-group">
-                        <label for="disabled-phone-number" class="d-block">رقم الهاتف</label>
-                        <input type="text" class="form-control col-10 d-inline"
-                               placeholder="رقم الهاتف" readonly disabled id="disabled-phone-number"
-                               value="{{.phoneNumber}}">
-                        <button class="btn btn-secondary" data-toggle="modal" data-target="#phoneNumberModal">تغيير
-                        </button>
-                    </div>
-                    <div class="form-group">
-                        <label for="disabled-email" class="d-block">البريد الالكتروني</label>
-                        <input type="email" class="form-control col-10 d-inline"
-                               placeholder="البريد الالكتروني" readonly disabled
-                               id="disabled-email" value="{{.email}}">
-                        <button class="btn btn-secondary" data-toggle="modal" data-target="#emailNumberModal">تغيير
-                        </button>
-                    </div>
+                    <fieldset class="border p-2">
+                        <legend style="font-size:16px; height:5px">
+                            بيانات الهاتف المحمول
+                        </legend>
+                        <div class="form-inline mb-3">
+                            <div class="form-group col-md-10">
+                                <label for="disabled-phone-number" class="d-block">رقم الهاتف</label>
+                                <input type="text" class="form-control col-10 d-inline"
+                                       placeholder="رقم الهاتف" readonly disabled id="disabled-phone-number"
+                                       value="{{.phoneNumber}}">
+                                <button class="btn btn-secondary" data-toggle="modal" data-target="#phoneNumberModal">
+                                    تغيير
+                                </button>
+                            </div>
+                            <div class="form-check col-md-2">
+                                <input type="checkbox" class="form-check-input" id="phone-notifications"
+                                       {{if not .activatedPhoneNumber}}disabled{{end}}
+                                        {{if .phoneNotifications}}checked{{end}}
+                                       onclick="changeNotifications('phone')">
+                                <label class="form-check-label" for="phone-notifications">استقبال الاشعارات</label>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="border p-2">
+                        <legend style="font-size:16px; height:5px">
+                            بيانات البريد الالكتروني
+                        </legend>
+                        <div class="form-inline mb-3">
+                            <div class="form-group col-md-10">
+                                <label for="disabled-email" class="d-block">البريد الالكتروني</label>
+                                <input type="email" class="form-control col-10 d-inline"
+                                       placeholder="البريد الالكتروني" readonly disabled
+                                       id="disabled-email" value="{{.email}}">
+                                <button class="btn btn-secondary" data-toggle="modal" data-target="#emailNumberModal">
+                                    تغيير
+                                </button>
+                            </div>
+                            <div class="form-check col-md-2">
+                                <input type="checkbox" class="form-check-input" id="email-notifications"
+                                       {{if not .activatedEmail}}disabled{{end}}
+                                        {{if .emailNotifications}}checked{{end}}
+                                       onclick="changeNotifications('email')">
+                                <label class="form-check-label" for="email-notifications">استقبال الاشعارات</label>
+                            </div>
+                        </div>
+                    </fieldset>
                     <div class="form-group">
                         <a href="/" class="btn btn-secondary btn-block">رجوع</a>
                     </div> <!-- form-group// -->
@@ -177,6 +208,17 @@
                     location.reload();
                 }
                 $('#email-feedback').addClass(data["status"]).text(data["message"]);
+            })
+        }
+
+        function changeNotifications(type) {
+            $.get("/change-notifications", {
+                notifications: $('#' + type + '-notifications').is(":checked"),
+                type: type
+            }, function (data) {
+                if (data["status"] === "reload") {
+                    location.reload();
+                }
             })
         }
     </script>

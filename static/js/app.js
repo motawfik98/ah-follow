@@ -125,12 +125,19 @@ $(document).ready(function () {
         dir: "rtl"
     });
 
+    $('#sent_to').select2({
+        placeholder: "اسم المستخدم",
+        dir: "rtl",
+        allowClear: true
+    });
+
 
     $(".datepicker").datepicker({
         format: 'yyyy-mm-dd'
     });
     $("#resetSearch").on('click', function () {
         $('#searchForm')[0].reset();
+        $('#sent_to').val('').trigger('change');
         $('.search').trigger("change");
         return false;
     });
@@ -285,8 +292,10 @@ $(document).ready(function () {
             if (classification === 2) {
                 for (let i = 0; i < data.following_users.length; i++) {
                     if (data.following_users[i].user_id === userID) {
-                        if (!data.following_users[i].seen)
+                        if (!data.following_users[i].seen || data.following_users[i].new_from_minister)
                             $(row).children().first().addClass('unseen');
+                        else if (data.following_users[i].new_from_working_on_user)
+                            $(row).children().first().addClass('new_from_working_on_user');
                         else if (data.following_users[i].marked_as_unseen)
                             $(row).children().first().addClass('marked_as_unseen');
                     }
@@ -318,7 +327,8 @@ $(document).ready(function () {
                     "sent_to": $("#sent_to").val(),
                     "min_date": $("#min").val(),
                     "max_date": $("#max").val(),
-                    "retrieve": $("input[name*='retrieveValues']:checked").val()
+                    "retrieve": $("input[name*='retrieveValues']:checked").val(),
+                    "hash": (getUrlVars()["hash"] !== "") ? getUrlVars()["hash"] : ""
                 });
             }
         },
@@ -432,7 +442,8 @@ function showPeopleActions() {
                 const data = myTable.row(modifier).data();
                 for (let i = 0; i < data.following_users.length; i++) {
                     if (data.following_users[i].user_id === userID) {
-                        if (!data.following_users[i].seen || data.following_users[i].marked_as_unseen) {
+                        if (!data.following_users[i].seen || data.following_users[i].marked_as_unseen ||
+                            data.following_users[i].new_from_working_on_user || data.following_users[i].new_from_minister) {
                             changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true, true);
                         }
                     }
@@ -595,3 +606,13 @@ function generateWorkingOnTable(data) {
     return innerTable;
 }
 
+function getUrlVars() {
+    var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for (var i = 0; i < hashes.length; i++) {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+    }
+    return vars;
+}

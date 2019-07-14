@@ -18,6 +18,11 @@ func (db *MyDB) index(c echo.Context) error {
 	// get the workingOnUsers ordered by the [order] column
 	db.GormDB.Preload("WorkingOnUserTasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
 
+	hash := c.QueryParam("hash")
+	hashExist := true
+	if hash == "" {
+		hashExist = false
+	}
 	return c.Render(http.StatusOK, "index.html", echo.Map{
 		"title":                "الرئيسية",     // sets the title of the page
 		"status":               status,         // pass the status of the flash message
@@ -28,6 +33,7 @@ func (db *MyDB) index(c echo.Context) error {
 		"userID":               userID,         // pass the userID
 		"username":             username,       // pass the username
 		"stringClassification": stringClassification,
+		"hashExist":            hashExist,
 	})
 }
 

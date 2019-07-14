@@ -14,6 +14,8 @@ type UserTask struct {
 
 type FollowingUserTask struct {
 	UserTask
+	NewFromMinister      bool `json:"new_from_minister" gorm:"default:1; not null"`
+	NewFromWorkingOnUser bool `json:"new_from_working_on_user" gorm:"default:0; not null"`
 }
 
 type WorkingOnUserTask struct {

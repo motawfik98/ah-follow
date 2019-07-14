@@ -219,7 +219,7 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.Redirect(http.StatusFound, "/") // redirect to the index page
+	return redirectWithFlashMessage("success", "تم تغيير كلمه السر بنجاح", "/", &c)
 }
 
 func (db *MyDB) resetPasswordByEmail(c echo.Context) error {

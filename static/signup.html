@@ -10,11 +10,11 @@
                     <form action="{{.formAction}}" method="post">
                         <div class="form-group">
                             <label for="username">اسم المستخدم</label>
-                            {{if .usernames}}
+                            {{if .users}}
                                 <select class="form-control js-select2" id="username" name="username">
                                     <option></option>
-                                    {{range .usernames}}
-                                        <option value="{{.}}">{{.}}</option>
+                                    {{range .users}}
+                                        <option value="{{.Username}}">{{.Username}}</option>
                                     {{end}}
                                 </select>
                             {{else}}
@@ -73,6 +73,11 @@
     </div> <!-- row.// -->
 
     <script>
+        $('#username').select2({
+            placeholder: "اسم المستخدم",
+            dir: "rtl"
+        });
+
         function changeByEmail() {
             $.get("/reset-password-by-email", {
                 username: $("#username").val()

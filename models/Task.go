@@ -56,6 +56,12 @@ func searchByRetrieveType(db *gorm.DB, retrieveType string, classification int) 
 			Where("user_tasks.final_response = 0 AND user_tasks.deleted_at IS NULL").
 			Group("tasks.id").Pluck("tasks.id", &ids)
 		db = db.Where("tasks.id IN (?)", ids)
+	} else if retrieveType == "newFromWorkingOnUsers" {
+		var ids []int
+		db.Table("tasks").Select("tasks.id").
+			Where("user_tasks.new_from_working_on_user = 1 AND user_tasks.deleted_at IS NULL").
+			Group("tasks.id").Pluck("tasks.id", &ids)
+		db = db.Where("tasks.id IN (?)", ids)
 	}
 	return db
 }
@@ -67,12 +73,11 @@ func filterByFields(db *gorm.DB, descriptionSearch, sentToSearch, minDateSearch,
 	}
 	if sentToSearch != "" { // if the end user entered data in the sent to search
 		var ids []int
-		sentToSearch = "%" + sentToSearch + "%" // add % before and after to match any
 		// gets the ids of the tasks which have the search value in their People array
 		db.Table("tasks").Select("DISTINCT tasks.id").
 			Joins("JOIN working_on_user_tasks wout ON tasks.id = wout.task_id").
 			Joins("JOIN users ON users.id = wout.user_id").
-			Where("users.username LIKE ?", sentToSearch).Pluck("tasks.id", &ids)
+			Where("users.username LIKE N'"+sentToSearch+"'").Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
 		db = db.Where("tasks.id IN (?)", ids)
 	}
@@ -94,20 +99,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 
 	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
 	var tasks []Task
-	var totalNumberOfRowsInDatabase int
-
-	if classification == 2 {
-		// join the user_tasks table to get only the tasks that were assigned to the logged in user
-		db = db.Table("tasks").Joins("JOIN following_user_tasks user_tasks " +
-			"ON user_tasks.task_id = tasks.id")
-		db = db.Where("user_tasks.user_id = ?", userID)
-	} else if classification == 3 {
-		// join the user_tasks table to get only the tasks that were assigned to the logged in user
-		db = db.Table("tasks").Joins("JOIN working_on_user_tasks user_tasks " +
-			"ON user_tasks.task_id = tasks.id")
-		db = db.Where("user_tasks.user_id = ?", userID)
-	}
-	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase) // gets the total number of records available for that specific user (or admin)
+	totalNumberOfRowsInDatabase, db := getTotalNumberOfRecordsInDatabase(classification, db, userID)
 	db = searchByRetrieveType(db, retrieveType, classification)
 
 	if classification == 3 {
@@ -149,4 +141,41 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	}
 
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
+}
+
+func getTotalNumberOfRecordsInDatabase(classification int, db *gorm.DB, userID uint) (int, *gorm.DB) {
+	var totalNumberOfRowsInDatabase int
+	if classification == 2 {
+		// join the user_tasks table to get only the tasks that were assigned to the logged in user
+		db = db.Table("tasks").Joins("JOIN following_user_tasks user_tasks " +
+			"ON user_tasks.task_id = tasks.id")
+		db = db.Where("user_tasks.user_id = ?", userID)
+	} else if classification == 3 {
+		// join the user_tasks table to get only the tasks that were assigned to the logged in user
+		db = db.Table("tasks").Joins("JOIN working_on_user_tasks user_tasks " +
+			"ON user_tasks.task_id = tasks.id")
+		db = db.Where("user_tasks.user_id = ?", userID)
+	}
+	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
+	// gets the total number of records available for that specific user (or admin)
+	return totalNumberOfRowsInDatabase, db
+}
+
+func GetTask(hash string, db *gorm.DB, classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
+	var tasks []Task
+	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
+	})
+	db = db.Preload("FollowingUsers").Preload("WorkingOnUsers.User")
+	db.Find(&tasks, "hash = ?", hash)
+	totalNumberOfRecords, _ := getTotalNumberOfRecordsInDatabase(classification, db, userID)
+
+	files := make([]File, 0)
+	for _, task := range tasks {
+		files = append(files, task.Files...)
+	}
+	fileOutput := map[string]interface{}{
+		"files": GenerateNumberObjectJson(files),
+	}
+	return tasks, totalNumberOfRecords, 1, fileOutput
 }
