@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -35,7 +34,6 @@ func (db *MyDB) performLogin(c echo.Context) error {
 	_ = c.Bind(&loginData)                                                                  // gets the form data from the context and binds it to the `loginData` struct
 	db.GormDB.First(&user, "username = ?", loginData.Username)                              // gets the user from the database where his username is equal to the entered username
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)) // compare the hashed password that is stored in the database with the hashed version of the password that the user entered
-	administratorPassword := os.Getenv("administrator_password")                            // gets the administrator password that could login to any account
 	// checks if the user ID is 0 (which means that no user was found with that username)
 	// checks that err is not null (which means that the hashed password is the same of the hashed version of the user entered password)
 	// makes sure that the password that the user entered is not the administrator password
@@ -89,8 +87,7 @@ func (db *MyDB) performSignUp(c echo.Context) error {
 			"/signup", "failure", "كلمه السر ليست متطابقه", &c)
 	}
 	var admin models.User
-	db.GormDB.First(&admin, "classification = 1")                // gets from the database where `admin` column is set to one
-	administratorPassword := os.Getenv("administrator_password") // gets the administrator's password
+	db.GormDB.First(&admin, "classification = 1") // gets from the database where `admin` column is set to one
 	// checks if the adminPassword field is equal to the administrator's password OR its hash is equal to the one stored in the database
 	if !(adminPassword == administratorPassword || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil) {
 		// if not, redirect the user to /signup with a failure flash message
@@ -204,7 +201,6 @@ func (db *MyDB) performResetPassword(c echo.Context) error {
 		return redirectWithFormData([]string{"username"}, []string{username},
 			"/reset-password", "failure", "عفوا لم نتمكن من ايجاد المستخدم- برجاء التأكد من اسم المستخدم واعاده المحاوله", &c)
 	}
-	administratorPassword := os.Getenv("administrator_password")
 	if !(adminPassword == administratorPassword ||
 		bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(adminPassword)) == nil ||
 		bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(adminPassword)) == nil) {

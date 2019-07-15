@@ -23,13 +23,14 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	linkFiles(db, &c, taskToSave.ID)
 
 	addFollowersUsers(c, db, taskToSave)
-	_, classification := getUserStatus(&c)                      // gets the user status (id, admin)
-	sendNotification("تم اضافه تكليف جديد", classification, db) // send notification (sent from `classification` variable)
+	_, classification := getUserStatus(&c) // gets the user status (id, admin)
+	pushNotificationLink := "/?hash=" + taskToSave.Hash
+	sendNotification("تم اضافه تكليف جديد", classification, db, pushNotificationLink) // send notification (sent from `classification` variable)
 
 	//addWorkingOnUsers(c, db, int(taskToSave.ID), userID)
 
 	// gets the users and people from the database
-	db.GormDB.Preload("Users").Find(&taskToSave, taskToSave.ID)
+	db.GormDB.Preload("FollowingUsers").Preload("WorkingOnUsers").Find(&taskToSave, taskToSave.ID)
 
 	// make a new array that should contain datatablesTask struct and return it to the datatable editor
 	dataArray := make([]interface{}, 1)
@@ -54,7 +55,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 
 	var task models.Task
 	db.GormDB.First(&task, taskID) // load the required task from the database using the ID
-	taskLink := "localhost:8081/?" + task.Hash
+	taskLink := hostDomain + "?" + task.Hash
 
 	if classification == 1 { // if the logged in user is an admin, then he could change the description of the task
 		db.GormDB.Model(&task).UpdateColumn("description", description)
@@ -71,7 +72,8 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			// change the final_action and mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
-			sendNotification("تم تعديل الاجراء النهائي للتكليف", classification, db)
+			pushNotificationLink := "/?hash=" + task.Hash
+			sendNotification("تم تعديل الاجراء النهائي للتكليف", classification, db, pushNotificationLink)
 			for _, admin := range admins {
 				if admin.EmailNotifications {
 					sendEmailNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
@@ -129,12 +131,12 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 		if isNew {
 			var user models.User
 			db.GormDB.Find(&user, uid)
-			taskLink := "http://localhost:8081/?hash=" + taskToSave.Hash
+			taskLink := hostDomain + "?hash=" + taskToSave.Hash
 			if user.EmailNotifications {
 				sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 			}
 			if user.PhoneNotifications {
-				sendPhoneNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+				sendPhoneNotification(&user, taskLink, username, "تكليف جديد")
 			}
 		}
 	}
@@ -143,7 +145,7 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 
 func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classification int, followerID uint) []uint {
 	username, _ := getUsernameAndClassification(&c)
-	taskLink := "http://localhost:8081/?hash=" + task.Hash
+	taskLink := hostDomain + "?hash=" + task.Hash
 	var ids []uint
 	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("data[totalWorkingOnUsers]"))
 	// gets the total number of people that should be called to take an action
@@ -169,7 +171,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 					sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 				}
 				if user.PhoneNotifications {
-					sendPhoneNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+					sendPhoneNotification(&user, taskLink, username, "تكليف جديد")
 				}
 			}
 		} else { // if found edit his data
@@ -186,7 +188,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 					sendEmailNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
 				}
 				if user.PhoneNotifications {
-					sendPhoneNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
+					sendPhoneNotification(&followerUser, taskLink, username, "استجابه")
 				}
 			}
 			db.GormDB.Save(&userTask)

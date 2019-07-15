@@ -1,9 +1,11 @@
 // notification
 
 self.addEventListener('push', event => {
-    const title = 'التعديلات الوزاريه';
+    const title = 'التكليفات الوزاريه';
+    let body = event.data.text().split(" task-link ");
     const options = {
-        body: event.data.text(),
+        body: body[0],
+        data: body[1],
         icon: "/img/notification.png",
         actions: [
             {action: 'explore', title: 'فتح التكليف'},
@@ -18,9 +20,7 @@ self.addEventListener('notificationclick', function (event) {
     event.notification.close();
 
     if (event.action === 'explore') {
-        clients.openWindow("/");
-        console.log(event);
-        console.log(event.notification);
+        clients.openWindow(event.notification.data);
     }
 }, false);
 

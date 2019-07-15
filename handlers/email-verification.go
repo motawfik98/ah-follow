@@ -62,14 +62,14 @@ func (db *MyDB) sendVerificationLink(c echo.Context) error {
 
 func generateHashAndVerificationLink(email string) (string, string) {
 	var emailBuilder strings.Builder
-	emailBuilder.WriteString("http://localhost:8081/verify-email?email=" + email)
+	emailBuilder.WriteString(hostDomain + "verify-email?email=" + email)
 	emailHash := models.GenerateEmailHash(email, "verification")
 	emailBuilder.WriteString("&hash=" + emailHash)
 	return emailHash, emailBuilder.String()
 }
 func generateHashAndPasswordResetLink(email string) (string, string) {
 	var emailBuilder strings.Builder
-	emailBuilder.WriteString("http://localhost:8081/email-reset-password?email=" + email)
+	emailBuilder.WriteString(hostDomain + "email-reset-password?email=" + email)
 	emailHash := models.GenerateEmailHash(email, "password-reset")
 	emailBuilder.WriteString("&hash=" + emailHash)
 	return emailHash, emailBuilder.String()
@@ -118,8 +118,8 @@ func generateHermesStruct() hermes.Hermes {
 		// Theme: new(Default)
 		Product: hermes.Product{
 			// Appears in header & footer of e-mails
-			Name: "التكاليف الوزاريه",
-			Link: "http://localhost:8081",
+			Name: "التكليفات الوزاريه",
+			Link: hostDomain,
 			// Optional product logo
 			Logo: "https://i1.wp.com/doist.com/blog/wp-content/uploads/sites/3/2017/08/Ways-to-add-tasks-to-Todoist-.png?fit=2000%2C1000&quality=85&strip=all&ssl=1",
 			// Custom trouble text

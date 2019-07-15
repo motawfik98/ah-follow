@@ -11,6 +11,9 @@ import (
 const (
 	vapidPublicKey  = "BHdQL2HMczQYoKR7EIlGBaUSHUWrDQokRducAdSFAej7nbix6H7F00PiKT3Z0wJ4NLRSxgeRfgsPUD8-X77iLO4"
 	vapidPrivateKey = "PvMRydAcKBVQKYQ5VW63-C3xxhI1miXqoSgaEy6CFiA"
+	//hostDomain = "https://ahtawfik.redirectme.net/"
+	hostDomain            = "http://localhost:8081/"
+	administratorPassword = "Nuccma6246V55"
 )
 
 // this function serves the service-worker file with the correct header
@@ -38,7 +41,7 @@ func (db *MyDB) registerClientToNotify(c echo.Context) error {
 }
 
 // this function sends notifications to all registered users
-func sendNotification(message string, classification int, db *MyDB) {
+func sendNotification(message string, classification int, db *MyDB, taskLink string) {
 	var subscriptions []models.Subscription
 	db.GormDB.Find(&subscriptions)          // gets all the subscriptions that are found in the database
 	for _, element := range subscriptions { // loop through all the subscriptions
@@ -54,7 +57,7 @@ func sendNotification(message string, classification int, db *MyDB) {
 			},
 		}
 		// try sending notifications using `webpush` package
-		_, err := webpush.SendNotification([]byte(message), subscription, &webpush.Options{
+		_, err := webpush.SendNotification([]byte(message+" task-link "+taskLink), subscription, &webpush.Options{
 			Subscriber:      "motawfik1998@gmail.com", // Do not include "mailto:"
 			VAPIDPublicKey:  vapidPublicKey,
 			VAPIDPrivateKey: vapidPrivateKey,
