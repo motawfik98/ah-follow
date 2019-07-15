@@ -102,18 +102,7 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	totalNumberOfRowsInDatabase, db := getTotalNumberOfRecordsInDatabase(classification, db, userID)
 	db = searchByRetrieveType(db, retrieveType, classification)
 
-	if classification == 3 {
-		db = db.Preload("WorkingOnUsers", func(db *gorm.DB) *gorm.DB {
-			return db.Where("working_on_user_tasks.user_id = ?", userID)
-		})
-		db = db.Preload("FollowingUsers", func(db *gorm.DB) *gorm.DB {
-			return db.Where("following_user_tasks.user_id IN (?)",
-				db.Table("working_on_user_tasks").Select("working_on_user_tasks.follower_id").
-					Where("working_on_user_tasks.user_id = ? AND working_on_user_tasks.deleted_at IS NULL", userID).QueryExpr())
-		})
-	} else {
-		db = db.Preload("FollowingUsers").Preload("WorkingOnUsers.User")
-	}
+	db = preloadFollowingAndWorkingOnUsers(classification, db, userID)
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
 	})
@@ -143,6 +132,22 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
 }
 
+func preloadFollowingAndWorkingOnUsers(classification int, db *gorm.DB, userID uint) *gorm.DB {
+	if classification == 3 {
+		db = db.Preload("WorkingOnUsers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("working_on_user_tasks.user_id = ?", userID)
+		})
+		db = db.Preload("FollowingUsers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("following_user_tasks.user_id IN (?)",
+				db.Table("working_on_user_tasks").Select("working_on_user_tasks.follower_id").
+					Where("working_on_user_tasks.user_id = ? AND working_on_user_tasks.deleted_at IS NULL", userID).QueryExpr())
+		})
+	} else {
+		db = db.Preload("FollowingUsers").Preload("WorkingOnUsers.User")
+	}
+	return db
+}
+
 func getTotalNumberOfRecordsInDatabase(classification int, db *gorm.DB, userID uint) (int, *gorm.DB) {
 	var totalNumberOfRowsInDatabase int
 	if classification == 2 {
@@ -166,7 +171,7 @@ func GetTask(hash string, db *gorm.DB, classification int, userID uint) ([]Task,
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
 	})
-	db = db.Preload("FollowingUsers").Preload("WorkingOnUsers.User")
+	db = preloadFollowingAndWorkingOnUsers(classification, db, userID)
 	db.Find(&tasks, "hash = ?", hash)
 	totalNumberOfRecords, _ := getTotalNumberOfRecordsInDatabase(classification, db, userID)
 

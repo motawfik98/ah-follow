@@ -26,14 +26,17 @@ type WorkingOnUserTask struct {
 	Notes         string `json:"notes"`
 }
 
-func CreateFollowingUserTask(db *gorm.DB, taskID, userID uint) {
+// this function returns a bool weather this userTask is new or not
+func CreateFollowingUserTask(db *gorm.DB, taskID, userID uint) bool {
 	personTask := FollowingUserTask{
 		UserTask: UserTask{TaskID: taskID, UserID: userID},
 	}
 	databaseError := db.Create(&personTask).GetErrors()
 	if len(databaseError) > 0 {
 		db.Table("following_user_tasks").Where("task_id = ? AND user_id = ?", taskID, userID).Update("deleted_at", nil)
+		return false
 	}
+	return true
 }
 
 func CreateWorkingOnUserTask(db *gorm.DB, taskID, userID uint, action string, finalResponse bool, followerID uint) uint {

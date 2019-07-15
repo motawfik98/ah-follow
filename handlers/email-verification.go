@@ -30,6 +30,7 @@ func (db *MyDB) changeEmail(c echo.Context) error {
 	}
 	user.Email = email
 	user.ValidEmail = false
+	user.EmailNotifications = false
 	db.GormDB.Save(&user)
 	return db.sendVerificationLink(c)
 }
@@ -159,6 +160,14 @@ func sendResetLink(user *models.User, resetLink string) {
 	sendEmail(user.Email, emailHTML, emailText, "تغيير كلمه السر")
 }
 
+func sendEmailNotification(user *models.User, taskLink, from, emailBody string) {
+	h := generateHermesStruct()
+	emailBody = emailBody + " بواسطه " + from
+	emailHTML, emailText := generateHermesEmail(user.Username, "هذا البريد الالكتروني خاص بالاشعارات-"+emailBody,
+		"لعرض التكليف اضغط هنا", "#0000FF", "عرض التكليف", taskLink, h)
+	sendEmail(user.Email, emailHTML, emailText, "اشعار من "+from)
+}
+
 func (db *MyDB) verifyEmail(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
@@ -169,8 +178,7 @@ func (db *MyDB) verifyEmail(c echo.Context) error {
 
 	db.GormDB.Where("user_id = ? AND email = ? AND verification_code = ?", userID, submittedEmail, submittedHash).First(&otp) // get all the not deleted OTPs from the database for that specific user and email
 	if user.Email != submittedEmail {
-		addFlashMessage("failure", "تأكد من الدخول بالحساب الصحيح", &c)
-		return c.Redirect(http.StatusOK, "/")
+		return redirectWithFlashMessage("failure", "تأكد من الدخول بالحساب الصحيح", "/", &c)
 	}
 
 	if otp.ID != 0 { // if the number was successfully verified
@@ -179,6 +187,6 @@ func (db *MyDB) verifyEmail(c echo.Context) error {
 		db.GormDB.Where("user_id = ? AND email = ?", userID, user.Email).Delete(models.OTP{})
 		return redirectWithFlashMessage("success", "تم تفعيل البريد الالكتروني", "/user-settings", &c)
 	} else {
-		return redirectWithFlashMessage("failure", "عفوا حدث خطأ ما برجاء المحاوله مره اخري او اعاده ارسال رابط التفعيل", "user-settings", &c)
+		return redirectWithFlashMessage("failure", "عفوا حدث خطأ ما برجاء المحاوله مره اخري او اعاده ارسال رابط التفعيل", "/user-settings", &c)
 	}
 }

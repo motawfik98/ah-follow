@@ -70,6 +70,7 @@ func (db *MyDB) changePhoneNumber(c echo.Context) error {
 	}
 	user.PhoneNumber = phoneNumber                  // change the user's number
 	user.ValidPhoneNumber = false                   // make the new number unverified
+	user.PhoneNotifications = false                 // make the user unable to receive notification by his phone
 	db.GormDB.Save(user)                            // update the user
 	_ = db.sendVerificationCode(c)                  // sends a verification code for the new number
 	return c.JSON(http.StatusOK, map[string]string{ // inform the user that a message has been sent to him
@@ -197,4 +198,10 @@ func (db *MyDB) changeNotifications(c echo.Context) error {
 		})
 	}
 	return nil
+}
+
+func sendPhoneNotification(user *models.User, taskLink, from, body string) {
+	message := body + " بواسطه " + from + " لرؤيه التكليف اضغط هنا " + taskLink
+	message = generateUTF16Message(message)
+	sendMessage(user.PhoneNumber, message)
 }

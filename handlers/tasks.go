@@ -40,7 +40,8 @@ func (db *MyDB) AddTask(c echo.Context) error {
 
 // this function edits an existing task
 func (db *MyDB) EditTask(c echo.Context) error {
-	userID, classification := getUserStatus(&c)    // gets the user status (id, classification)
+	userID, classification := getUserStatus(&c) // gets the user status (id, classification)
+	username, _ := getUsernameAndClassification(&c)
 	taskID, err := strconv.Atoi(c.FormValue("id")) // gets the ID of the requested task to edit
 	if err != nil {                                // if an error occurred parsing the ID, it may be malicious request
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -53,22 +54,32 @@ func (db *MyDB) EditTask(c echo.Context) error {
 
 	var task models.Task
 	db.GormDB.First(&task, taskID) // load the required task from the database using the ID
-	if classification == 1 {       // if the logged in user is an admin, then he could change the description of the task
+	taskLink := "localhost:8081/?" + task.Hash
+
+	if classification == 1 { // if the logged in user is an admin, then he could change the description of the task
 		db.GormDB.Model(&task).UpdateColumn("description", description)
 	}
 	if finalAction != task.FinalAction.String { // if the final_action given by the user is different than that in the database
-		var adminsIDs []uint
-		db.GormDB.Model(&models.User{}).Where("classification = 1").Pluck("id", &adminsIDs)
+		var admins []models.User
+		db.GormDB.Find(&admins, "classification = 1")
 		if finalAction == "" { // if final_action string is empty, then the final_action was deleted
 			// set the final_action to null and there's no need to mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": nil, "seen": true})
 			// send a notification to the admin informing him
-			sendNotification("تم الغاء الاجراء النهائي للتكليف", classification, db)
+			//sendNotification("تم الغاء الاجراء النهائي للتكليف", classification, db)
 		} else {
 			// change the final_action and mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
 			sendNotification("تم تعديل الاجراء النهائي للتكليف", classification, db)
+			for _, admin := range admins {
+				if admin.EmailNotifications {
+					sendEmailNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
+				}
+				if admin.PhoneNotifications {
+					sendPhoneNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
+				}
+			}
 		}
 	}
 
@@ -77,11 +88,11 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	var followersIDs []uint
 	if classification == 1 {
 		followersIDs = append(followersIDs, addFollowersUsers(c, db, task)...)
-		sendNotification("تم تعديل التكليف", classification, db) // send notifications to the users telling them that the task was edited
+		//sendNotification("تم تعديل التكليف", classification, db) // send notifications to the users telling them that the task was edited
 	}
 
 	var workingOnIDs []uint
-	workingOnIDs = append(workingOnIDs, addWorkingOnUsers(c, db, taskID, classification, userID)...)
+	workingOnIDs = append(workingOnIDs, addWorkingOnUsers(c, db, &task, classification, userID)...)
 
 	if followersIDs == nil {
 		followersIDs = []uint{0}
@@ -103,6 +114,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 }
 
 func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint {
+	username, _ := getUsernameAndClassification(&c)
 	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
 	// gets the value of the total users that were assigned to finish that task
 	var users []uint
@@ -112,13 +124,26 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 			continue
 		}
 		uid, _ := strconv.ParseUint(id, 10, 64)
-		models.CreateFollowingUserTask(db.GormDB, taskToSave.ID, uint(uid)) // creates a FollowingUserTask to the database
-		users = append(users, uint(uid))                                    // append the id to the users array
+		isNew := models.CreateFollowingUserTask(db.GormDB, taskToSave.ID, uint(uid)) // creates a FollowingUserTask to the database
+		users = append(users, uint(uid))                                             // append the id to the users array
+		if isNew {
+			var user models.User
+			db.GormDB.Find(&user, uid)
+			taskLink := "http://localhost:8081/?hash=" + taskToSave.Hash
+			if user.EmailNotifications {
+				sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+			}
+			if user.PhoneNotifications {
+				sendPhoneNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+			}
+		}
 	}
 	return users
 }
 
-func addWorkingOnUsers(c echo.Context, db *MyDB, taskID, classification int, followerID uint) []uint {
+func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classification int, followerID uint) []uint {
+	username, _ := getUsernameAndClassification(&c)
+	taskLink := "http://localhost:8081/?hash=" + task.Hash
 	var ids []uint
 	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("data[totalWorkingOnUsers]"))
 	// gets the total number of people that should be called to take an action
@@ -133,11 +158,19 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, taskID, classification int, fol
 		if userID == "" { // if no userID is given then continue
 			continue
 		}
-		db.GormDB.Where("user_id = ? AND task_id = ?", userID, taskID).Find(&userTask) // try to get the userTask with the same userID and task id
+		db.GormDB.Where("user_id = ? AND task_id = ?", userID, task.ID).Find(&userTask) // try to get the userTask with the same userID and task id
+		var user models.User
+		db.GormDB.Find(&user, userID)
 		var id uint
 		if userTask.ID == 0 { // if not found create one
 			if classification == 2 {
-				id = models.CreateWorkingOnUserTask(db.GormDB, uint(taskID), uint(uid), action, finalResponse, followerID)
+				id = models.CreateWorkingOnUserTask(db.GormDB, task.ID, uint(uid), action, finalResponse, followerID)
+				if user.EmailNotifications {
+					sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+				}
+				if user.PhoneNotifications {
+					sendPhoneNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
+				}
 			}
 		} else { // if found edit his data
 			if classification == 2 {
@@ -145,8 +178,16 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, taskID, classification int, fol
 				userTask.FinalResponse = finalResponse
 			} else if classification == 3 {
 				userTask.Notes = notes
-				db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userTask.FollowerID).
+				db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", task.ID, userTask.FollowerID).
 					Updates(map[string]interface{}{"new_from_working_on_user": true})
+				var followerUser models.User
+				db.GormDB.Find(&followerUser, userTask.FollowerID)
+				if user.EmailNotifications {
+					sendEmailNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
+				}
+				if user.PhoneNotifications {
+					sendPhoneNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
+				}
 			}
 			db.GormDB.Save(&userTask)
 			id = userTask.UserID
