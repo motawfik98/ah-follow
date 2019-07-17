@@ -138,7 +138,7 @@ func sendEmail(userEmail, emailHTML, emailText, subject string) {
 	m.SetBody("text/plain", emailText)
 	m.AddAlternative("text/html", emailHTML)
 
-	d := gomail.NewDialer("smtp.gmail.com", 465, "motawfik10@gmail.com", "aoulcplxdwgkurzf")
+	d := gomail.NewDialer("smtp.gmail.com", 465, "ahtawfik68@gmail.com", "ophmfqfusqxxrkni")
 	// Send the email
 	if err := d.DialAndSend(m); err != nil {
 		panic(err)
