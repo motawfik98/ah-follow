@@ -77,7 +77,7 @@ func filterByFields(db *gorm.DB, descriptionSearch, sentToSearch, minDateSearch,
 		db.Table("tasks").Select("DISTINCT tasks.id").
 			Joins("JOIN working_on_user_tasks wout ON tasks.id = wout.task_id").
 			Joins("JOIN users ON users.id = wout.user_id").
-			Where("users.username LIKE N'"+sentToSearch+"'").Pluck("tasks.id", &ids)
+			Where("users.hash = ?", sentToSearch).Pluck("tasks.id", &ids)
 		// gets all the tasks where its id is found in the ids array
 		db = db.Where("tasks.id IN (?)", ids)
 	}

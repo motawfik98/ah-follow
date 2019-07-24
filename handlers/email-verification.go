@@ -120,10 +120,8 @@ func generateHermesStruct() hermes.Hermes {
 			// Appears in header & footer of e-mails
 			Name: "التكليفات الوزاريه",
 			Link: hostDomain,
-			// Optional product logo
-			Logo: "https://i1.wp.com/doist.com/blog/wp-content/uploads/sites/3/2017/08/Ways-to-add-tasks-to-Todoist-.png?fit=2000%2C1000&quality=85&strip=all&ssl=1",
 			// Custom trouble text
-			TroubleText: "لو لم يعمل زر \"{ACTION}\" قم بالضغط على الرابط التالي",
+			TroubleText: "لو لم يعمل/يظهر زر \"{ACTION}\" قم بالضغط على الرابط التالي",
 			// Custom copyright notice
 			Copyright: "Copyright © 2019 Eng. Ahmed Tawfik.",
 		},

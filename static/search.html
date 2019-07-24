@@ -22,7 +22,7 @@
                             <select class="form-control js-select2 search" id="sent_to" style="width:100%">
                                 <option></option>
                                 {{range .workingOnUsers}}
-                                    <option value="{{.Username}}">{{.Username}}</option>
+                                    <option value="{{.Hash}}">{{.Username}}</option>
                                 {{end}}
                             </select>
                         </div>
