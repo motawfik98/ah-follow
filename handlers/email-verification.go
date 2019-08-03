@@ -123,7 +123,7 @@ func generateHermesStruct() hermes.Hermes {
 			// Custom trouble text
 			TroubleText: "لو لم يعمل/يظهر زر \"{ACTION}\" قم بالضغط على الرابط التالي",
 			// Custom copyright notice
-			Copyright: "Copyright © 2019 Eng. Ahmed Tawfik.",
+			Copyright: "© م/احمد توفيق احمد -- هيئه المجتمعات العمرانيه الجديده - قطاع التخطيط والمشروعات",
 		},
 	}
 }

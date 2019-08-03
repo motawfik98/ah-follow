@@ -23,9 +23,6 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	linkFiles(db, &c, taskToSave.ID)
 
 	addFollowersUsers(c, db, taskToSave)
-	_, classification := getUserStatus(&c) // gets the user status (id, admin)
-	pushNotificationLink := "/?hash=" + taskToSave.Hash
-	sendNotification("تم اضافه تكليف جديد", classification, db, pushNotificationLink) // send notification (sent from `classification` variable)
 
 	//addWorkingOnUsers(c, db, int(taskToSave.ID), userID)
 
@@ -73,8 +70,8 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
 			pushNotificationLink := "/?hash=" + task.Hash
-			sendNotification("تم تعديل الاجراء النهائي للتكليف", classification, db, pushNotificationLink)
 			for _, admin := range admins {
+				sendNotification("تم تعديل الاجراء النهائي للتكليف", admin.ID, db, pushNotificationLink)
 				if admin.EmailNotifications {
 					sendEmailNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
 				}
@@ -128,10 +125,11 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 		uid, _ := strconv.ParseUint(id, 10, 64)
 		isNew := models.CreateFollowingUserTask(db.GormDB, taskToSave.ID, uint(uid)) // creates a FollowingUserTask to the database
 		users = append(users, uint(uid))                                             // append the id to the users array
+		taskLink := hostDomain + "?hash=" + taskToSave.Hash
 		if isNew {
 			var user models.User
 			db.GormDB.Find(&user, uid)
-			taskLink := hostDomain + "?hash=" + taskToSave.Hash
+			sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
 			if user.EmailNotifications {
 				sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 			}
@@ -167,6 +165,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 		if userTask.ID == 0 { // if not found create one
 			if classification == 2 {
 				id = models.CreateWorkingOnUserTask(db.GormDB, task.ID, uint(uid), action, finalResponse, followerID)
+				sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
 				if user.EmailNotifications {
 					sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 				}
@@ -184,6 +183,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 					Updates(map[string]interface{}{"new_from_working_on_user": true})
 				var followerUser models.User
 				db.GormDB.Find(&followerUser, userTask.FollowerID)
+				sendNotification("تم اضافه رد على التكليف من القائم به", userTask.FollowerID, db, taskLink)
 				if user.EmailNotifications {
 					sendEmailNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
 				}

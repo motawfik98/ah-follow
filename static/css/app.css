@@ -121,10 +121,11 @@ body::after {
     text-align: center;
     position: absolute;
     width: 100%;
-    height: 60px;
+    height: auto;
     line-height: 60px;
 }
 
-#footer-text {
+.footer-text {
+    line-height: 25px;
     margin: 0;
 }

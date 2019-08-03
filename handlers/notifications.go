@@ -25,31 +25,26 @@ func serveServiceWorkerFile(context echo.Context) error {
 
 // this function adds the endpoint of the browser to the database to be able to send notifications later
 func (db *MyDB) registerClientToNotify(c echo.Context) error {
-	userID, classification := getUserStatus(&c) // gets the userID, admin status from the current logged in user
-	subscription := models.Subscription{        // create a new Subscription struct containing all the needed data
-		Endpoint:       c.FormValue("endpoint"), // gets the `endpoint`
-		Auth:           c.FormValue("auth"),     // gets the `auth` key
-		P256dh:         c.FormValue("p256dh"),   // gets the `p256dh` key
-		UserID:         userID,                  // use the correct userID
-		Classification: classification,          // add if the user is admin or not (useful when trying to know is the notification would be sent to a specific user or not)
+	userID, _ := getUserStatus(&c)       // gets the userID, admin status from the current logged in user
+	subscription := models.Subscription{ // create a new Subscription struct containing all the needed data
+		Endpoint: c.FormValue("endpoint"), // gets the `endpoint`
+		Auth:     c.FormValue("auth"),     // gets the `auth` key
+		P256dh:   c.FormValue("p256dh"),   // gets the `p256dh` key
+		UserID:   userID,                  // use the correct userID
 	}
 	databaseError := db.GormDB.Create(&subscription).GetErrors() // try to add a new subscription to the database
 	if len(databaseError) > 0 {                                  // if errors are found, mainly would be because the unique index of the `endpoint` column
 		// update the current subscription, set the is_admin column to its correct value
-		db.GormDB.Model(&subscription).UpdateColumn("classification", classification)
+		db.GormDB.Model(&models.Subscription{}).Where("endpoint = ?", subscription.Endpoint).Update("user_id", userID)
 	}
 	return nil
 }
 
 // this function sends notifications to all registered users
-func sendNotification(message string, classification int, db *MyDB, taskLink string) {
+func sendNotification(message string, userID uint, db *MyDB, taskLink string) {
 	var subscriptions []models.Subscription
-	db.GormDB.Find(&subscriptions)          // gets all the subscriptions that are found in the database
-	for _, element := range subscriptions { // loop through all the subscriptions
-		if classification == element.Classification { // if the sending user has the same classification status as the stored subscription
-			// no point of notifying the admin user with an action he has made
-			continue
-		}
+	db.GormDB.Where("user_id = ?", userID).Find(&subscriptions) // gets all the subscriptions that are found in the database
+	for _, element := range subscriptions {                     // loop through all the subscriptions
 		subscription := &webpush.Subscription{ // create a `webpush` subscription
 			Endpoint: element.Endpoint, // sets the endpoint
 			Keys: webpush.Keys{ // sets the keys
