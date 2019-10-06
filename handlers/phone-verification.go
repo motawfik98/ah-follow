@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"../models"
+	"ah-follow-modules/models"
 	"crypto/rand"
 	"fmt"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"math/big"
 	"net/http"
 	"regexp"

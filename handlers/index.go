@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"../models"
-	"github.com/labstack/echo"
+	"ah-follow-modules/models"
+	"github.com/labstack/echo/v4"
 	"net/http"
 )
 

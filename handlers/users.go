@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"../models"
+	"ah-follow-modules/models"
 	"github.com/jinzhu/gorm"
-	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"

@@ -1,7 +1,7 @@
 package configurations
 
 import (
-	"../models"
+	"ah-follow-modules/models"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mssql"
 )

@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"../models"
-	"github.com/arxdsilva/hermes"
+	"ah-follow-modules/models"
 	"github.com/go-gomail/gomail"
 	"github.com/goware/emailx"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
+	"github.com/matcornic/hermes/v2"
 	"net/http"
 	"strings"
 )
