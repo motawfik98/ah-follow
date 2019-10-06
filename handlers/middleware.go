@@ -67,7 +67,7 @@ func getSession(sessionName string, c *echo.Context) *sessions.Session {
 	sess, _ := session.Get(sessionName, *c)
 	sess.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 7,
+		MaxAge:   0, // to enforce the browser to logout after the session was closed
 		HttpOnly: true,
 	}
 	return sess
