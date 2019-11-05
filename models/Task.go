@@ -93,15 +93,35 @@ func filterByFields(db *gorm.DB, descriptionSearch, sentToSearch, minDateSearch,
 }
 
 // this function takes the search parameters (datatables parameters) and return the corresponding data
-func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
+func GetPaginatedTasksAndFiles(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
 	classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
 
-	sortedColumn = "tasks." + sortedColumn // set the name of the column that the end user is sorting with
+	db, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter :=
+		filterTasks(sortedColumn, db, classification, userID, retrieveType,
+			descriptionSearch, sentToSearch, minDateSearch, maxDateSearch)
+	// adds the offset and limit to apply pagination
+	var tasks []Task
+	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
+
+	files := make([]File, 0)
+	for _, task := range tasks {
+		files = append(files, task.Files...)
+	}
+	fileOutput := map[string]interface{}{
+		"files": GenerateNumberObjectJson(files),
+	}
+
+	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
+}
+
+func filterTasks(sortedColumn string, db *gorm.DB, classification int, userID uint, retrieveType string, descriptionSearch string, sentToSearch string, minDateSearch string, maxDateSearch string) (*gorm.DB, int, int) {
+
+	sortedColumn = "tasks." + sortedColumn
+	// set the name of the column that the end user is sorting with
 	var tasks []Task
 	totalNumberOfRowsInDatabase, db := getTotalNumberOfRecordsInDatabase(classification, db, userID)
 	db = searchByRetrieveType(db, retrieveType, classification)
-
 	db = preloadFollowingAndWorkingOnUsers(classification, db, userID)
 	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
@@ -118,18 +138,19 @@ func GetAllTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 			db = db.Order("user_tasks.seen")
 		}
 	}
+	return db, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
+}
+
+func GetAllTasks(db *gorm.DB, sortedColumn, direction, descriptionSearch, sentToSearch,
+	minDateSearch, maxDateSearch, retrieveType string, classification int, userID uint) ([]Task, int, int) {
+
+	db, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter :=
+		filterTasks(sortedColumn, db, classification, userID, retrieveType,
+			descriptionSearch, sentToSearch, minDateSearch, maxDateSearch)
 	// adds the offset and limit to apply pagination
-	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
-
-	files := make([]File, 0)
-	for _, task := range tasks {
-		files = append(files, task.Files...)
-	}
-	fileOutput := map[string]interface{}{
-		"files": GenerateNumberObjectJson(files),
-	}
-
-	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
+	var tasks []Task
+	db.Order(sortedColumn + " " + direction).Find(&tasks)
+	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
 }
 
 func preloadFollowingAndWorkingOnUsers(classification int, db *gorm.DB, userID uint) *gorm.DB {

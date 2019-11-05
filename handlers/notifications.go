@@ -11,8 +11,8 @@ import (
 const (
 	vapidPublicKey  = "BHdQL2HMczQYoKR7EIlGBaUSHUWrDQokRducAdSFAej7nbix6H7F00PiKT3Z0wJ4NLRSxgeRfgsPUD8-X77iLO4"
 	vapidPrivateKey = "PvMRydAcKBVQKYQ5VW63-C3xxhI1miXqoSgaEy6CFiA"
-	//hostDomain = "http://task.moh.gov.eg/"
-	hostDomain            = "https://ahtawfik.redirectme.net/"
+	hostDomain      = "https://task.moh.gov.eg/"
+	//hostDomain            = "https://ahtawfik.redirectme.net/"
 	administratorPassword = "Nuccma6246V55"
 )
 

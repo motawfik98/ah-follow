@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -250,7 +251,7 @@ func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
 	return nil
 }
 
-// this function gets the parameters of the datatable to send it to `GetAllTasks` function
+// this function gets the parameters of the datatable to send it to `GetPaginatedTasksAndFiles` function
 func (db *MyDB) GetTasks(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // gets the value of userID and classification
 	hash := c.QueryParam("hash")
@@ -264,25 +265,49 @@ func (db *MyDB) GetTasks(c echo.Context) error {
 		dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
 		return c.JSONPretty(http.StatusOK, dt, " ")
 	}
-	start, _ := strconv.Atoi(q["start"][0])                         // the start point of the current data set
-	length, _ := strconv.Atoi(q["length"][0])                       // number of records to display (page size)
-	sortedColumnNumber, _ := strconv.Atoi(q["order[0][column]"][0]) // column to which ordering should be applied
-	direction := q["order[0][dir]"][0]                              // ordering direction for this column
-	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber) // gets the name of the sorted column (not the numer)
+	start, length, direction, sortedColumnName, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType :=
+		getFilterData(q, classification)
+
+	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files =
+		models.GetPaginatedTasksAndFiles(db.GormDB, start, length,
+			sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch,
+			retrieveType, classification, userID)
+
+	dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
+
+	return c.JSONPretty(http.StatusOK, dt, " ")
+}
+
+func getFilterData(q url.Values, classification int) (int, int, string, string, string, string, string, string, string) {
+	start, _ := strconv.Atoi(q["start"][0])
+	// the start point of the current data set
+	length, _ := strconv.Atoi(q["length"][0])
+	// number of records to display (page size)
+	sortedColumnNumber, _ := strconv.Atoi(q["order[0][column]"][0])
+	// column to which ordering should be applied
+	direction := q["order[0][dir]"][0]
+	// ordering direction for this column
+	sprintf := fmt.Sprintf("columns[%d][name]", sortedColumnNumber)
+	// gets the name of the sorted column (not the numer)
 	sortedColumnName := q[sprintf][0]
-	descriptionSearch := q["description"][0] // the value of the description search
+	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType := getUserFilterData(q, classification)
+	return start, length, direction, sortedColumnName, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType
+}
+
+func getUserFilterData(q url.Values, classification int) (string, string, string, string, string) {
+	descriptionSearch := q["description"][0]
+	// the value of the description search
 	sentToSearch := ""
 	if classification != 3 {
 		sentToSearch = q["sent_to"][0] // the value of the sent_to search
 	}
-	minDateSearch := q["min_date"][0] // the value of min_date search
-	maxDateSearch := q["max_date"][0] // the value of max_date search
-	retrieveType := q["retrieve"][0]  // the value of the retrieve type
-	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files = models.GetAllTasks(db.GormDB, start, length,
-		sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, classification, userID)
-	dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
-
-	return c.JSONPretty(http.StatusOK, dt, " ")
+	minDateSearch := q["min_date"][0]
+	// the value of min_date search
+	maxDateSearch := q["max_date"][0]
+	// the value of max_date search
+	retrieveType := q["retrieve"][0]
+	// the value of the retrieve type
+	return descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType
 }
 
 func generateDTOutput(tasks []models.Task, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int, files map[string]interface{}, draw int) dtOutput {

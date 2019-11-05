@@ -322,13 +322,14 @@ $(document).ready(function () {
         ajax: {
             url: "/tasks/getData",
             data: function (d) {
+                let values = getFilteredAttributes();
                 return $.extend({}, d, {
-                    "description": $("#description").val(),
-                    "sent_to": $("#sent_to").val(),
-                    "min_date": $("#min").val(),
-                    "max_date": $("#max").val(),
-                    "retrieve": $("input[name*='retrieveValues']:checked").val(),
-                    "hash": (getUrlVars()["hash"] !== "") ? getUrlVars()["hash"] : ""
+                    "description": values[0],
+                    "sent_to": values[1],
+                    "min_date": values[2],
+                    "max_date": values[3],
+                    "retrieve": values[4],
+                    "hash": values[5]
                 });
             }
         },
@@ -341,7 +342,27 @@ $(document).ready(function () {
         buttons: [
             addDataTableButton("create", "اضافه تكليف"),
             addDataTableButton("edit", "تعديل تكليف"),
-            addDataTableButton("remove", "مسح تكليف")
+            addDataTableButton("remove", "مسح تكليف"),
+            {
+                extend: 'collection',
+                text: "طباعه",
+                buttons: [
+                    {
+                        text: 'طباعه مختصره',
+                        action: function (e, dt, node, config) {
+                            let PDFUrl = generatePDFUrl() + "&collapsed=true";
+                            window.open(PDFUrl, "_blank");
+                        }
+                    },
+                    {
+                        text: 'طباعه بالقائمين به',
+                        action: function (e, dt, node, config) {
+                            let PDFUrl = generatePDFUrl() + "&collapsed=false";
+                            window.open(PDFUrl, "_blank");
+                        }
+                    }
+                ],
+            }
         ]
     });
 
@@ -355,6 +376,25 @@ $(document).ready(function () {
         myTable.draw();
     });
 });
+
+function generatePDFUrl() {
+    let values = getFilteredAttributes();
+    return `/generate-pdf?description=${values[0]}&sent_to=${values[1]}&min_date=${values[2]}&max_date=${values[3]}`
+        + `&retrieve=${values[4]}&hash=${values[5]}&sort_column=${values[6]}&sort_direction=${values[7]}`
+}
+
+function getFilteredAttributes() {
+    let description = $("#description").val();
+    let sent_to = $("#sent_to").val();
+    let min_date = $("#min").val();
+    let max_date = $("#max").val();
+    let retrieve = $("input[name*='retrieveValues']:checked").val();
+    let hash = (getUrlVars()["hash"] !== "") ? getUrlVars()["hash"] : "";
+    let order = myTable.order();
+    let sort_column = order[0][0];
+    let sort_direction = order[0][1];
+    return [description, sent_to, min_date, max_date, retrieve, hash, sort_column, sort_direction]
+}
 
 function addDataTableButton(baseButton, text) {
     return {
