@@ -14,6 +14,7 @@ type User struct {
 	FollowingUserTasks []*FollowingUserTask `gorm:"PRELOAD:false"`
 	WorkingOnUserTasks []*WorkingOnUserTask `gorm:"PRELOAD:false"`
 	Subscriptions      []*Subscription      `gorm:"PRELOAD:false"`
+	Files              []*File              `gorm:"PRELOAD:false"`
 	PhoneNumber        string
 	ValidPhoneNumber   bool `gorm:"default:0"`
 	PhoneNotifications bool `gorm:"default:0"`

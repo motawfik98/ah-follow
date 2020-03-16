@@ -23,12 +23,17 @@ func NewRequestPdf(body string) *RequestPdf {
 }
 
 //parsing template function
-func (r *RequestPdf) ParseTemplate(templateFileName string, data interface{}) error {
+func (r *RequestPdf) ParseTemplate(templateName, templatePath string, data interface{}) error {
 
-	t, err := template.ParseFiles(templateFileName)
+	t, err := template.New(templateName).Funcs(template.FuncMap{
+		"incrementOne": func(number int) int {
+			return number + 1
+		},
+	}).ParseFiles(templatePath)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	buf := new(bytes.Buffer)
 	if err = t.Execute(buf, data); err != nil {
 		return err

@@ -23,6 +23,7 @@ func (db *MyDB) generatePDF(c echo.Context) error {
 		direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType, classification, userID)
 	//html template path
 	templatePath := "static/reports/pdf-report.html"
+	templateName := "pdf-report.html"
 	reportDescription := "هذا التقرير خاص ب" + generateReportDescription(retrieveType, classification)
 
 	//html template data
@@ -40,7 +41,7 @@ func (db *MyDB) generatePDF(c echo.Context) error {
 		TotalNumberOfRowsAfterFilter: totalNumberOfRowsAfterFilter,
 	}
 
-	if err := r.ParseTemplate(templatePath, templateData); err == nil {
+	if err := r.ParseTemplate(templateName, templatePath, templateData); err == nil {
 		pdfg, _ := r.GeneratePDF()
 		c.Response().Header().Set("Content-Type", "application/pdf")
 		c.Response().Header().Set("content-disposition", "inline;filename=")

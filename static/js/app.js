@@ -1,7 +1,9 @@
-let editor; // use a global for the submit and return data rendering in the examples
 let myTable;
 const maxTextLength = ($(window).width() < 991.98) ? 50 : 180;
 let cols;
+let deletedFiles = [];
+let allUploadedFiles = [];
+let newFilesNames = new Map();
 let basicCols = [
     {
         width: "5%",
@@ -15,9 +17,10 @@ let basicCols = [
         width: "5%",
         data: "description",
         orderable: false,
-        className: 'select-checkbox',
-        render: function () {
-            return ''
+        render: function (data, type, row, meta) {
+            let timestamp = Math.random().toString(36).substring(7);
+            let editLink = "/tasks/task/" + row.Hash + "/" + timestamp;
+            return '<a href="' + editLink + '">' + 'تعديل' + '</a>';
         },
     }, {
         data: "description",
@@ -141,105 +144,29 @@ $(document).ready(function () {
         $('.search').trigger("change");
         return false;
     });
-    $("#czContainer").czMore({
-        onAdd: function (index) {
-            $('.workingOn-select2').select2({
-                placeholder: 'اسم القائم به',
-                dir: "rtl",
-            });
-            if ($('.recordset').length > 0) {
-                alternateRecordsetColors(index);
-            }
-        }, onDelete: function (id) {
-            let length = $('.recordset').length;
-            if (length > 0) {
-                for (let index = 1; index <= length; index++) {
+
+    let czContainer = $("#czContainer");
+    if (czContainer.length > 0) {
+        czContainer.czMore({
+            onAdd: function (index) {
+                $('.workingOn-select2').select2({
+                    placeholder: 'اسم القائم به',
+                    dir: "rtl",
+                });
+                if ($('.recordset').length > 0) {
                     alternateRecordsetColors(index);
                 }
+            }, onDelete: function (id) {
+                let length = $('.recordset').length;
+                if (length > 0) {
+                    for (let index = 1; index <= length; index++) {
+                        alternateRecordsetColors(index);
+                    }
 
-            }
-        }
-    });
-
-
-    editor = new $.fn.dataTable.Editor({
-        table: "#baseTable",
-        template: '#customForm',
-        formOptions: {
-            main: {
-                onEsc: false
-            }
-        },
-        ajax: {
-            create: {
-                type: 'POST',
-                url: '/tasks/add'
-            }, edit: {
-                type: 'POST',
-                url: '/tasks/edit'
-            }, remove: {
-                type: 'POST',
-                url: '/tasks/remove'
-            }
-        },
-        idSrc: "ID",
-        legacyAjax: true,
-        fields: [{
-            label: "التكليف:",
-            name: "description",
-            type: "textarea",
-            attr: {
-                disabled: classification !== 1,
-                readonly: classification !== 1
-            }
-        }, {
-            label: "الاجراء النهائي:",
-            name: "final_action",
-            type: "textarea",
-            attr: {
-                disabled: classification === 1,
-                readonly: classification === 1
-            }
-        }, {
-            label: "ملفات:",
-            ajax: '/tasks/validate-image',
-            name: "files[].id",
-            type: "uploadMany",
-            display: function (file_id) {
-                let file = editor.file('files', file_id);
-                return '<a class="file-display mx-5" target="_blank" href=' + file.web_path + '>'
-                    + file.created_at + '</a>';
-            },
-            noFileText: 'لا يوجد ملف',
-            fileReadText: 'يتم الرفع',
-            uploadText: 'رفع ملف',
-            clearText: 'مسح الاختيار',
-            dragDropText: 'اسحب الملف الى هنا ليتم الرفع',
-            processingText: 'يتم الرفع'
-        }],
-        i18n: {
-            create: {
-                button: "اضافه",
-                title: "اضافه تكليف",
-                submit: "حفظ التكليف"
-            },
-            edit: {
-                button: "تعديل",
-                title: "تعديل تكليف",
-                submit: "حفظ التكليف"
-            },
-            remove: {
-                button: "مسح",
-                title: "مسح تكليف",
-                submit: "مسح",
-                confirm: {
-                    _: "هل انت متأكد من مسح %d سجل ؟",
-                    1: "هل انت متأكد من مسح هذا سجل ؟"
                 }
             }
-        }
-    });
-
+        });
+    }
 
     myTable = $('#baseTable').DataTable({
         responsive: {
@@ -281,36 +208,7 @@ $(document).ready(function () {
         },
         initComplete: configureTableForNonAdmins,
         createdRow: function (row, data, dataIndex) {
-            let filesIDs = [];
-            for (let i = 0; i < data.files.length; i++) {
-                filesIDs.push({"id": data.files[i].ID.toString()})
-            }
-            data.files = filesIDs;
-            if (classification === 1 && !data.seen) {
-                $(row).children().first().addClass('unseen');
-            }
-            if (classification === 2) {
-                for (let i = 0; i < data.following_users.length; i++) {
-                    if (data.following_users[i].user_id === userID) {
-                        if (!data.following_users[i].seen || data.following_users[i].new_from_minister)
-                            $(row).children().first().addClass('unseen');
-                        else if (data.following_users[i].new_from_working_on_user)
-                            $(row).children().first().addClass('new_from_working_on_user');
-                        else if (data.following_users[i].marked_as_unseen)
-                            $(row).children().first().addClass('marked_as_unseen');
-                    }
-                }
-            }
-            if (classification === 3) {
-                for (let i = 0; i < data.workingOn_users.length; i++) {
-                    if (data.workingOn_users[i].user_id === userID) {
-                        if (!data.workingOn_users[i].seen)
-                            $(row).children().first().addClass('unseen');
-                        else if (data.workingOn_users[i].marked_as_unseen)
-                            $(row).children().first().addClass('marked_as_unseen');
-                    }
-                }
-            }
+            $(row).children().first().addClass(data.seen_status);
         },
         language: {
             url: '/source-codes/languages/datatables.language.json'
@@ -335,17 +233,18 @@ $(document).ready(function () {
         },
         columns: cols,
         dom: 'Brtip',        // element order: NEEDS BUTTON CONTAINER (B) ****
-        select: {
-            style: 'os',
-            selector: 'td:nth-child(2)'
-        },     // enable single row selection
         buttons: [
-            addDataTableButton("create", "اضافه تكليف"),
-            addDataTableButton("edit", "تعديل تكليف"),
-            addDataTableButton("remove", "مسح تكليف"),
+            {
+                text: "تكليف جديد",
+                name: "createButton",
+                action: function () {
+                    let timestamp = Math.random().toString(36).substring(7);
+                    window.location.replace("/tasks/task/new/" + timestamp);
+                }
+            },
             {
                 extend: 'collection',
-                text: "طباعه",
+                text: "طباعه التكليفات",
                 buttons: [
                     {
                         text: 'طباعه مختصره',
@@ -369,12 +268,11 @@ $(document).ready(function () {
     search();
     sendExtraFormDataAndValidate();
     showPeopleActions();
-    openModalOnDoubleClick();
-    redrawTableOnModalClose();
-    preventModalOpeningIfNoRecordsAreFound();
     $('#btnRefresh').on('click', function () {
         myTable.draw();
     });
+    configureFileUpload();
+    changeFileName();
 });
 
 function generatePDFUrl() {
@@ -396,151 +294,49 @@ function getFilteredAttributes() {
     return [description, sent_to, min_date, max_date, retrieve, hash, sort_column, sort_direction]
 }
 
-function addDataTableButton(baseButton, text) {
-    return {
-        extend: baseButton,
-        editor: editor,
-        name: baseButton + "Button",
-        formButtons: [
-            {
-                text: text,
-                className: 'btn-primary mr-3',
-                action: function () {
-                    this.submit();
-                }
-            },
-            {
-                text: 'الرجوع',
-                className: 'btn-secondary',
-                action: function () {
-                    this.close();
-                }
-            }
-        ]
-    }
-}
-
-function preventModalOpeningIfNoRecordsAreFound() {
-    editor.on('preOpen', function (e, type, action) {
-        const modifier = editor.modifier();
-        if (action === "edit" && modifier.length < 1) {
-            return false;
-        }
-    });
-}
-
-function redrawTableOnModalClose() {
-    editor.on('close', function () {
-        myTable.draw();
-    });
-}
-
 
 function configureTableForNonAdmins() {
     if (classification !== 1) {
-        myTable.buttons('createButton:name, removeButton:name').remove();
+        myTable.buttons('createButton:name').remove();
     }
 }
 
-function openModalOnDoubleClick() {
-    $('#baseTable tbody').on('dblclick', 'tr', function () {
-        myTable.rows('.selected').deselect();
-        $(this).toggleClass('selected');
-        myTable.rows('.selected').edit();
-        $(this).toggleClass('selected');
-    });
-}
 
 function showPeopleActions() {
-    editor.on('open', function (e, type, action) {
-        if (classification === 3) {
-            removeFilesUpload();
-        }
-        let $markAsSeen = $('#markAsSeen');
-        if (action === 'edit') {
-            if ($markAsSeen.length < 1) {
-                let markTaskAsUnseen = '<button class="btn btn-link mr-5" id="markAsSeen">اعتباره جديد</button>';
-                $(markTaskAsUnseen).insertBefore('.DTE_Header>.close');
-            } else {
-                $markAsSeen.removeClass("d-none");
-            }
-        } else {
-            $markAsSeen.addClass("d-none");
-        }
-        const modifier = editor.modifier();
-        let $selectedUsers = $('#selectedFollowingUsers');
-        if (classification === 1) {
-            if (modifier) {
-                const data = myTable.row(modifier).data();
-                if (!data.seen) {
-                    changeTaskSeenProperty(data.ID, true);
-                }
-            }
-        } else if (classification === 2) {
-            $selectedUsers.attr('disabled', true);
-            if (modifier) {
-                const data = myTable.row(modifier).data();
-                for (let i = 0; i < data.following_users.length; i++) {
-                    if (data.following_users[i].user_id === userID) {
-                        if (!data.following_users[i].seen || data.following_users[i].marked_as_unseen ||
-                            data.following_users[i].new_from_working_on_user || data.following_users[i].new_from_minister) {
-                            changeUserTaskSeenProperty(data.ID, data.following_users[i].user_id, true, true);
-                        }
-                    }
-                }
-            }
-        } else {
-            $selectedUsers.attr('disabled', true);
-            if (modifier) {
-                const data = myTable.row(modifier).data();
-                for (let i = 0; i < data.workingOn_users.length; i++) {
-                    if (data.workingOn_users[i].user_id === userID) {
-                        if (!data.workingOn_users[i].seen || data.workingOn_users[i].marked_as_unseen) {
-                            changeUserTaskSeenProperty(data.ID, data.workingOn_users[i].user_id, true, false);
-                        }
-                    }
-                }
-            }
-        }
-
-        $selectedUsers.val(null).trigger('change');
-        $('#czContainer').empty();
-        const selectedPeopleIDs = [];
-        if (modifier) {
-            const data = myTable.row(modifier).data();
-            const finalAction = this.field('final_action');
-            finalAction.val(data.final_action.String);
-            for (let i = 1; i <= data.following_users.length; i++) {
-                selectedPeopleIDs.push(data.following_users[i - 1].user_id);
-            }
-            $selectedUsers.val(selectedPeopleIDs);
-            $selectedUsers.trigger('change'); // Notify any JS components that the value changed
-
-            for (let i = 1; i <= data.workingOn_users.length; i++) {
-                addPersonAndHisActionToModal(i, data);
-            }
-            $markAsSeen = $('#markAsSeen');
-            $markAsSeen.off();
-            $markAsSeen.on('click', function () {
-                if (classification === 1)
-                    changeTaskSeenProperty(data.ID, false);
-                else if (classification === 2)
-                    changeUserTaskSeenProperty(data.ID, userID, false, true);
-                else
-                    changeUserTaskSeenProperty(data.ID, userID, false, false);
-            });
-        }
+    let $markAsSeen = $('#markAsSeen');
+    $markAsSeen.on('click', function () {
+        $.post("mark-as-unseen", {
+            task_id: task.ID,
+        }, function (data) {
+            $("#seen-feedback").addClass(data["status"]).text(data["message"]);
+        });
     });
+
+    let $selectedUsers = $('#selectedFollowingUsers');
+    if (classification !== 1) {
+        $selectedUsers.attr('disabled', true);
+    }
+
+    $selectedUsers.val(null).trigger('change');
+    $('#czContainer').empty();
+    const selectedPeopleIDs = [];
+
+    if (task.following_users !== null) {
+        for (let i = 1; i <= task.following_users.length; i++) {
+            selectedPeopleIDs.push(task.following_users[i - 1].user_id);
+        }
+        $selectedUsers.val(selectedPeopleIDs);
+        $selectedUsers.trigger('change'); // Notify any JS components that the value changed
+    }
+
+    if (task.workingOn_users !== null) {
+        for (let i = 1; i <= task.workingOn_users.length; i++) {
+            addPersonAndHisActionToForm(i, task);
+        }
+    }
 }
 
-function removeFilesUpload() {
-    $('.eu_table .row').first().remove();
-    $('.eu_table .second .drop').remove();
-    $('.btn.remove').remove();
-
-}
-
-function addPersonAndHisActionToModal(i, data) {
+function addPersonAndHisActionToForm(i, data) {
     $('#btnPlus').trigger('click');
     $('#id_' + i + '_repeat').val(data.workingOn_users[i - 1].ID);
     $('#user_id_' + i + '_repeat').val(data.workingOn_users[i - 1].user_id).trigger('change').attr("readonly", true).attr("disabled", true);
@@ -550,29 +346,11 @@ function addPersonAndHisActionToModal(i, data) {
     $actionTaken.val(data.workingOn_users[i - 1].action_taken);
     $workingOnNotes.val(data.workingOn_users[i - 1].notes);
     $finalResponse.prop('checked', data.workingOn_users[i - 1].final_response);
-    if (classification === 3) {
+    if (classification !== 2) {
         $actionTaken.attr("readonly", true).attr("disabled", true);
         $finalResponse.attr("readonly", true).attr("disabled", true);
     }
 }
-
-function changeTaskSeenProperty(taskID, seenProperty) {
-    $.post("/tasks/seen", {
-        seen: seenProperty,
-        task_id: taskID
-    });
-
-}
-
-function changeUserTaskSeenProperty(taskID, userID, seenProperty, isFollower) {
-    $.post("/tasks/person/seen", {
-        seen: seenProperty,
-        task_id: taskID,
-        user_id: userID,
-        is_follower: isFollower,
-    });
-}
-
 
 function search() {
     $(".search").on('keyup change', function () {
@@ -581,60 +359,108 @@ function search() {
 }
 
 function sendExtraFormDataAndValidate() {
-    editor.on('preSubmit', function (e, data, action) {
-        if (action === 'remove')
-            return;
+    $('#addEditForm').on('submit', function (e) {
 
         $(".invalid-feedback").hide();
-
-        const description = this.field('description');
-
-
+        const description = $('#description');
+        let errorFound = false;
         if (description.val().length === 0) {
-            description.error('يجب ان يوجد تكليف');
-            editor.error("حدث خطأ, برجاء مراجعه البيانات");
+            errorFound = true;
+            description.next().show();
         }
 
         let numberOfPeople = $('#czContainer_czMore_txtCount').val();
         for (let i = 0; i < numberOfPeople; i++) {
-            if ($('#finalResponse_' + (i + 1) + '_repeat').is(':checked')) {
-                let $actionTaken = $('#action_' + (i + 1) + '_repeat');
-                if ($actionTaken.val() === "") {
-                    $actionTaken.next().show();
-                    editor.error("حدث خطأ, برجاء مراجعه البيانات");
-                }
+            let $actionTaken = $('#action_' + (i + 1) + '_repeat');
+            let $finalResponse = $('#finalResponse_' + (i + 1) + '_repeat');
+            let $userID = $('#user_id_' + (i + 1) + '_repeat');
+            if ($actionTaken.val() === "" && $finalResponse.is(':checked')) {
+                $actionTaken.next().show();
+                errorFound = true;
+            }
+            if ($actionTaken.val() !== "" && $userID.val() === "") {
+                $userID.next().next().show();
+                errorFound = true;
+
             }
         }
 
-        if (this.inError()) {
-            return false;
+        if (errorFound) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#form-validation').show();
+            return;
         }
 
+        let formData = new FormData($('#addEditForm')[0]);
+
+        formData.append("id", task.ID + "");
 
         let selectedUsers = $('#selectedFollowingUsers').val();
         const numberOfExtraUsers = selectedUsers.length;
-        data.data['totalUsers'] = numberOfExtraUsers;
+        formData.append("totalUsers", numberOfExtraUsers);
         for (let i = 0; i < numberOfExtraUsers; i++) {
-            data.data["following_users_" + i] = selectedUsers[i];
+            formData.append("following_users_" + i, selectedUsers[i])
         }
 
-        data.data['totalWorkingOnUsers'] = numberOfPeople;
+        formData.append("totalWorkingOnUsers", numberOfPeople);
         for (let i = 0; i < numberOfPeople; i++) {
-            data.data["people_id_" + i] = $('#id_' + (i + 1) + '_repeat').val();
-            data.data["people_user_id_" + i] = $('#user_id_' + (i + 1) + '_repeat').val();
-            data.data["people_action_" + i] = $('#action_' + (i + 1) + '_repeat').val();
-            data.data["people_notes_" + i] = $('#workingOnNotes_' + (i + 1) + '_repeat').val();
-            data.data["people_finalResponse_" + i] = $('#finalResponse_' + (i + 1) + '_repeat').is(':checked');
+            formData.append("people_id_" + i, $('#id_' + (i + 1) + '_repeat').val());
+            formData.append("people_user_id_" + i, $('#user_id_' + (i + 1) + '_repeat').val());
+            formData.append("people_action_" + i, $('#action_' + (i + 1) + '_repeat').val());
+            formData.append("people_notes_" + i, $('#workingOnNotes_' + (i + 1) + '_repeat').val());
+            formData.append("people_finalResponse_" + i, $('#finalResponse_' + (i + 1) + '_repeat').val());
         }
 
+        let numberOfDeletedFiles = deletedFiles.length;
+        formData.append("totalDeletedFiles", numberOfDeletedFiles + "");
+        for (let i = 0; i < numberOfDeletedFiles; i++) {
+            formData.append("deleted_file_" + i, deletedFiles[i]);
+        }
+        formData.delete("files");
 
-    })
+        for (let i = 0; i < allUploadedFiles.length; i++) {
+            formData.append('files', allUploadedFiles[i]);
+        }
+
+        formData.append("totalRenamedFiles", newFilesNames.size + "");
+        let fileNumber = 0;
+        for (let [fileHash, newFileName] of newFilesNames) {
+            formData.append("file_hash_" + fileNumber, fileHash);
+            formData.append("file_name_" + fileNumber, newFileName);
+            fileNumber++;
+        }
+
+        e.preventDefault();
+        let actionUrl = $(this).attr('action');
+        $.ajax({
+            method: 'post',
+            processData: false,
+            contentType: false,
+            cache: false,
+            data: formData,
+            url: actionUrl,
+            beforeSend: function () {
+                let $submitButton = $('#btn-form-submit');
+                $submitButton.attr('disabled', 'true');
+                $submitButton.html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>جاري الحفظ`);
+            },
+            success: function (data) {
+                window.location = "/";
+            },
+            failure: function () {
+                let $submitButton = $('#btn-form-submit');
+                $submitButton.attr('disabled', 'false');
+                $submitButton.html(`تعديل`);
+            }
+        });
+    });
 }
 
 function generateWorkingOnTable(data) {
     let innerTable = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px; width: 80%">';
     innerTable += '<thead><tr>';
-    innerTable += '<th>القائم به</th><th>الموقف</th>';
+    innerTable += '<th width="20%">القائم به</th><th>الموقف</th>';
     innerTable += '</tr></head><tbody>';
     for (let i = 0; i < data.length; i++) {
         innerTable += '<tr>';
@@ -655,4 +481,91 @@ function getUrlVars() {
         vars[hash[0]] = hash[1];
     }
     return vars;
+}
+
+function configureFileUpload() {
+    deletedFiles = [];
+    allUploadedFiles = [];
+    let $customFileInput = $('#customFile');
+    if ($customFileInput.length === 0)
+        return;
+    $customFileInput.on('change', function () {
+        let $newFilesList = $('#new-files');
+        let files = $customFileInput.prop('files');
+        allUploadedFiles.push.apply(allUploadedFiles, files);
+        viewFilesToBeUploaded($newFilesList);
+    });
+    $('#display-old-files').on('click', '.file-deletion', function () {
+        if ($(this).hasClass('delete')) {
+            deleteFile($(this));
+        } else {
+            restoreFile($(this));
+        }
+    });
+
+    $('#display-new-files').on('click', '.cancel', function () {
+        let fileIndex = $(this).parent().index();
+        allUploadedFiles.splice(fileIndex, 1);
+        viewFilesToBeUploaded($('#new-files'));
+    });
+}
+
+function deleteFile($fileClicked) {
+    let hash = $fileClicked.parent().next().val();
+    deletedFiles.push(hash);
+    $fileClicked.parent().parent().addClass('list-group-item-danger');
+    $fileClicked.removeClass('delete');
+    $fileClicked.addClass('restore');
+    $fileClicked.text('استرجاع');
+}
+
+function restoreFile($fileClicked) {
+    let hash = $fileClicked.parent().next().val();
+    let fileIndex = deletedFiles.indexOf(hash);
+    if (fileIndex > -1)
+        deletedFiles.splice(fileIndex, 1);
+    $fileClicked.parent().parent().removeClass('list-group-item-danger');
+    $fileClicked.addClass('delete');
+    $fileClicked.removeClass('restore');
+    $fileClicked.text('مسح');
+}
+
+function viewFilesToBeUploaded($newFilesList) {
+    $newFilesList.children().remove();
+    for (let i = 0; i < allUploadedFiles.length; i++) {
+        let fileText = "الاسم " + allUploadedFiles[i].name;
+        $newFilesList.append('<li class="list-group-item d-flex justify-content-between align-items-center">' + fileText
+            + '<span class="badge badge-danger badge-pill cancel" style="cursor:pointer">مسح</span></li>');
+    }
+}
+
+function changeFileName() {
+    let $fileNameParagraph = "";
+    let originalFileName = "";
+    let fileHash = "";
+    $('.file-edit').on('click', function () {
+        fileHash = $(this).parent().next().val();
+        let fileName = $(this).prev().val();
+        originalFileName = fileName;
+        if (newFilesNames.has(fileHash))
+            fileName = newFilesNames.get(fileHash);
+        $fileNameParagraph = $(this).parent().next().next();
+        $('#file-edit-name').val(fileName);
+        $('#file-edit-hash').val(fileHash);
+    });
+
+    $('#btn-edit-file').on('click', function () {
+        let newFileName = $('#file-edit-name').val();
+        let fileHash = $('#file-edit-hash').val();
+        newFilesNames.set(fileHash, newFileName);
+
+        let paragraphText = "سوف يتم تغيير اسم الملف عند التعديل الى " + newFileName;
+        $fileNameParagraph.text(paragraphText);
+    });
+
+    $('#btn-restore-name').on('click', function () {
+        if (newFilesNames.has(fileHash))
+            newFilesNames.delete(fileHash);
+        $fileNameParagraph.text("");
+    });
 }

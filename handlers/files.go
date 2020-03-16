@@ -5,54 +5,58 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
-func (db *MyDB) validateFile(c echo.Context) error {
-
-	form, err := c.MultipartForm()
-	if err != nil {
-		fmt.Println("Error Retrieving the File")
-		fmt.Println(err)
-	}
-	fileGiven := form.File["upload"][0]
+func (db *MyDB) validateAndSaveFile(fileGiven *multipart.FileHeader, taskID, userID uint) uint {
 	file := models.File{}
 
-	// Source
 	src, err := fileGiven.Open()
 	if err != nil {
-		return err
+		fmt.Println(err)
+	} else {
+		file.TaskID = taskID
+		originalBytes, _ := ioutil.ReadAll(src)
+		file.Bytes = originalBytes
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		file.ContentType = http.DetectContentType(originalBytes)
+		fullFileName := fileGiven.Filename
+		file.FileName, file.Extension = getFileNameAndExtension(fullFileName)
+		file.UserID = userID
+		db.GormDB.Create(&file)
 	}
 	defer src.Close()
-	reader, _ := fileGiven.Open()
-	file.Bytes, _ = ioutil.ReadAll(reader)
-	file.ContentType = http.DetectContentType(file.Bytes)
-	fmt.Println(file.ContentType)
-
-	db.GormDB.Create(&file)
-
-	files := make([]models.File, 1)
-	files[0] = file
-	fileOutput := models.GenerateFilesObjectJson(files)
-
-	return c.JSONPretty(http.StatusOK, fileOutput, " ")
+	return file.ID
 }
 
 func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
+	userID, _ := getUserStatus(c)
 	context := *c
-	numberOfFiles, _ := strconv.Atoi(context.FormValue("data[files-many-count]"))
-	var filesIDs []int
-	for i := 0; i < numberOfFiles; i++ {
-		fileID, _ := strconv.Atoi(context.FormValue(fmt.Sprintf("data[files][%d][id]", i)))
-		filesIDs = append(filesIDs, fileID)
+	formFiles, _ := context.MultipartForm()
+	files := formFiles.File["files"]
 
+	for _, file := range files {
+		db.validateAndSaveFile(file, taskID, userID)
 	}
-	if filesIDs == nil {
-		filesIDs = append(filesIDs, 0)
+
+	totalDeletedFiles, _ := strconv.Atoi(context.FormValue("totalDeletedFiles"))
+	deletedFilesHashes := make([]string, totalDeletedFiles)
+	for i := 0; i < totalDeletedFiles; i++ {
+		deletedFilesHashes = append(deletedFilesHashes, context.FormValue("deleted_file_"+strconv.Itoa(i)))
 	}
-	db.GormDB.Table("files").Where("id IN (?)", filesIDs).UpdateColumn("task_id", taskID)
-	db.GormDB.Delete(models.File{}, "task_id = ? AND id NOT IN (?)", taskID, filesIDs)
+	totalRenamedFiles, _ := strconv.Atoi(context.FormValue("totalRenamedFiles"))
+	for i := 0; i < totalRenamedFiles; i++ {
+		fileHash := context.FormValue("file_hash_" + strconv.Itoa(i))
+		fileName := context.FormValue("file_name_" + strconv.Itoa(i))
+		db.GormDB.Model(models.File{}).Where("hash = ?", fileHash).Update("file_name", fileName)
+	}
+	db.GormDB.Delete(models.File{}, "task_id = ? AND hash IN (?)", taskID, deletedFilesHashes)
 }
 
 func (db *MyDB) showFile(c echo.Context) error {
@@ -78,9 +82,15 @@ func (db *MyDB) showFile(c echo.Context) error {
 func displayFile(context *echo.Context, file models.File) error {
 	c := *context
 	c.Response().Header().Set("Content-Type", file.ContentType)
-	c.Response().Header().Set("content-disposition", "inline;filename="+file.Hash)
+	c.Response().Header().Set("content-disposition", "inline;filename="+file.FileName+"."+file.Extension)
 	c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")
 	_, _ = c.Response().Write(file.Bytes)
 	c.Response().Flush()
 	return nil
+}
+
+func getFileNameAndExtension(fullFileName string) (string, string) {
+	extension := fullFileName[strings.LastIndex(fullFileName, ".")+1:]
+	fileName := fullFileName[:strings.LastIndex(fullFileName, ".")]
+	return fileName, extension
 }

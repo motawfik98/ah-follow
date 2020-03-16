@@ -13,6 +13,7 @@ const (
 	vapidPrivateKey = "PvMRydAcKBVQKYQ5VW63-C3xxhI1miXqoSgaEy6CFiA"
 	hostDomain      = "https://task.moh.gov.eg/"
 	//hostDomain            = "https://ahtawfik.redirectme.net/"
+	//hostDomain = "http:localhost:8085/"
 	administratorPassword = "Nuccma6246V55"
 )
 

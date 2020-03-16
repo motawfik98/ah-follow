@@ -60,8 +60,10 @@
         </table>
     </div>
 
-    {{template "custom-form". }}
-
+    {{/*    {{template "custom-form". }}*/}}
+    <script>
+        let classification = {{.classification}};
+    </script>
 
 
     {{template "footer".}}

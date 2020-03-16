@@ -130,13 +130,15 @@ func generateHermesStruct() hermes.Hermes {
 
 func sendEmail(userEmail, emailHTML, emailText, subject string) {
 	m := gomail.NewMessage()
-	m.SetHeader("From", "takaleef@gmail.com")
+	m.SetHeader("From", "taklyfat@gmail.com")
 	m.SetHeader("To", userEmail)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", emailText)
 	m.AddAlternative("text/html", emailHTML)
 
-	d := gomail.NewDialer("smtp.gmail.com", 465, "task.mhuc@gmail.com", "wlwsvqenlfmmqsdo")
+	//d := gomail.NewDialer("smtp.gmail.com", 465, "motawfik10@gmail.com", "aoulcplxdwgkurzf")
+	//d := gomail.NewDialer("smtp.gmail.com", 465, "task.mhuc@gmail.com", "wlwsvqenlfmmqsdo")
+	d := gomail.NewDialer("smtp.gmail.com", 465, "taklyfat@gmail.com", "oazbsrgnymgucipy")
 	//d := gomail.NewDialer("smtp-mail.outlook.com", 587, "task_mic@moh.gov.eg", "Ta!@3456")
 	// Send the email
 	if err := d.DialAndSend(m); err != nil {

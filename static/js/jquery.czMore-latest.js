@@ -48,7 +48,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                     btnPlus.css({
                         'float': 'right',
                         'border': '0px',
-                        'background-image': 'url("img/add.png")',
+                        'background-image': 'url("/img/add.png")',
                         'background-position': 'center center',
                         'background-repeat': 'no-repeat',
                         'height': '25px',
@@ -134,7 +134,7 @@ MIT License, https://github.com/cozeit/czMore/blob/master/LICENSE.md
                         btnMinus.css({
                             'float': 'right',
                             'border': '0px',
-                            'background-image': 'url("img/remove.png")',
+                            'background-image': 'url("/img/remove.png")',
                             'background-position': 'center center',
                             'background-repeat': 'no-repeat',
                             'height': '25px',

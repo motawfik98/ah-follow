@@ -15,6 +15,7 @@ type Task struct {
 	Hash           string
 	FollowingUsers []*FollowingUserTask `json:"following_users"`
 	WorkingOnUsers []*WorkingOnUserTask `json:"workingOn_users"`
+	SeenStatus     string               `gorm:"-" json:"seen_status"`
 }
 
 func (task *Task) AfterCreate(scope *gorm.Scope) error {
@@ -93,9 +94,9 @@ func filterByFields(db *gorm.DB, descriptionSearch, sentToSearch, minDateSearch,
 }
 
 // this function takes the search parameters (datatables parameters) and return the corresponding data
-func GetPaginatedTasksAndFiles(db *gorm.DB, offset int, limit int, sortedColumn, direction,
+func GetPaginatedTasks(db *gorm.DB, offset int, limit int, sortedColumn, direction,
 	descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType string,
-	classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
+	classification int, userID uint) ([]Task, int, int) {
 
 	db, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter :=
 		filterTasks(sortedColumn, db, classification, userID, retrieveType,
@@ -104,15 +105,9 @@ func GetPaginatedTasksAndFiles(db *gorm.DB, offset int, limit int, sortedColumn,
 	var tasks []Task
 	db.Offset(offset).Limit(limit).Order(sortedColumn + " " + direction).Find(&tasks)
 
-	files := make([]File, 0)
-	for _, task := range tasks {
-		files = append(files, task.Files...)
-	}
-	fileOutput := map[string]interface{}{
-		"files": GenerateNumberObjectJson(files),
-	}
+	evaluateSeenStatus(&tasks, classification, userID)
 
-	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, fileOutput
+	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
 }
 
 func filterTasks(sortedColumn string, db *gorm.DB, classification int, userID uint, retrieveType string, descriptionSearch string, sentToSearch string, minDateSearch string, maxDateSearch string) (*gorm.DB, int, int) {
@@ -122,10 +117,8 @@ func filterTasks(sortedColumn string, db *gorm.DB, classification int, userID ui
 	var tasks []Task
 	totalNumberOfRowsInDatabase, db := getTotalNumberOfRecordsInDatabase(classification, db, userID)
 	db = searchByRetrieveType(db, retrieveType, classification)
-	db = preloadFollowingAndWorkingOnUsers(classification, db, userID)
-	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
-	})
+	db = PreloadFollowingAndWorkingOnUsers(classification, db, userID)
+
 	db = filterByFields(db, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch)
 	// gets the total number of records after applying all the filtering
 	var totalNumberOfRowsAfterFilter int
@@ -153,7 +146,7 @@ func GetAllTasks(db *gorm.DB, sortedColumn, direction, descriptionSearch, sentTo
 	return tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter
 }
 
-func preloadFollowingAndWorkingOnUsers(classification int, db *gorm.DB, userID uint) *gorm.DB {
+func PreloadFollowingAndWorkingOnUsers(classification int, db *gorm.DB, userID uint) *gorm.DB {
 	if classification == 3 {
 		db = db.Preload("WorkingOnUsers", func(db *gorm.DB) *gorm.DB {
 			return db.Where("working_on_user_tasks.user_id = ?", userID)
@@ -187,21 +180,44 @@ func getTotalNumberOfRecordsInDatabase(classification int, db *gorm.DB, userID u
 	return totalNumberOfRowsInDatabase, db
 }
 
-func GetTask(hash string, db *gorm.DB, classification int, userID uint) ([]Task, int, int, map[string]interface{}) {
+func GetTask(hash string, db *gorm.DB, classification int, userID uint) ([]Task, int, int) {
 	var tasks []Task
-	db = db.Preload("Files", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id, created_at, updated_at, deleted_at, task_id, hash").Order("task_id, created_at")
-	})
-	db = preloadFollowingAndWorkingOnUsers(classification, db, userID)
+
+	db = PreloadFollowingAndWorkingOnUsers(classification, db, userID)
 	db.Find(&tasks, "hash = ?", hash)
 	totalNumberOfRecords, _ := getTotalNumberOfRecordsInDatabase(classification, db, userID)
+	evaluateSeenStatus(&tasks, classification, userID)
+	return tasks, totalNumberOfRecords, 1
+}
 
-	files := make([]File, 0)
-	for _, task := range tasks {
-		files = append(files, task.Files...)
+// this function adds the CSS class that should be added to each row in the table
+func evaluateSeenStatus(tasks *[]Task, classification int, userID uint) {
+	for index, task := range *tasks {
+		if classification == 1 && !task.Seen {
+			(*tasks)[index].SeenStatus = "unseen"
+		} else if classification == 2 {
+			for followingUserIndex, _ := range task.FollowingUsers {
+				if task.FollowingUsers[followingUserIndex].UserID == userID {
+					if !task.FollowingUsers[followingUserIndex].Seen || task.FollowingUsers[followingUserIndex].NewFromMinister {
+						(*tasks)[index].SeenStatus = "unseen"
+					} else if task.FollowingUsers[followingUserIndex].NewFromWorkingOnUser {
+						(*tasks)[index].SeenStatus = "new_from_working_on_user"
+					} else if task.FollowingUsers[followingUserIndex].MarkedAsUnseen {
+						(*tasks)[index].SeenStatus = "marked_as_unseen"
+					}
+				}
+			}
+		} else if classification == 3 {
+			for workingOnUserIndex, _ := range task.WorkingOnUsers {
+				if task.WorkingOnUsers[workingOnUserIndex].UserID == userID {
+					if !task.WorkingOnUsers[workingOnUserIndex].Seen {
+						(*tasks)[index].SeenStatus = "unseen"
+					} else if task.WorkingOnUsers[workingOnUserIndex].MarkedAsUnseen {
+						(*tasks)[index].SeenStatus = "marked_as_unseen"
+					}
+				}
+			}
+		}
+
 	}
-	fileOutput := map[string]interface{}{
-		"files": GenerateNumberObjectJson(files),
-	}
-	return tasks, totalNumberOfRecords, 1, fileOutput
 }

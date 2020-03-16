@@ -3,6 +3,7 @@ package handlers
 import (
 	"ah-follow-modules/models"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"net/url"
@@ -17,7 +18,7 @@ type datatableTask struct {
 // this function adds task to the database
 func (db *MyDB) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
-		Description: c.FormValue("data[description]"), // gets the value of the description from the form that was submitted
+		Description: c.FormValue("description"), // gets the value of the description from the form that was submitted
 	}
 	db.GormDB.Create(&taskToSave) // saves the task to the database
 
@@ -30,11 +31,8 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	// gets the users and people from the database
 	db.GormDB.Preload("FollowingUsers").Preload("WorkingOnUsers").Find(&taskToSave, taskToSave.ID)
 
-	// make a new array that should contain datatablesTask struct and return it to the datatable editor
-	dataArray := make([]interface{}, 1)
-	dataArray[0] = taskToSave
-	datatableTask := datatableTask{dataArray}
-	return c.JSONPretty(http.StatusOK, datatableTask, " ")
+	addFlashMessage("success", "تم انشاء التكليف", &c)
+	return c.JSON(http.StatusOK, map[string]string{})
 }
 
 // this function edits an existing task
@@ -48,8 +46,8 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		})
 	}
 
-	description := c.FormValue("data[description]")  // gets the value of the description
-	finalAction := c.FormValue("data[final_action]") // gets the value of the final_action
+	description := c.FormValue("description")  // gets the value of the description
+	finalAction := c.FormValue("final_action") // gets the value of the final_action
 
 	var task models.Task
 	db.GormDB.First(&task, taskID) // load the required task from the database using the ID
@@ -107,19 +105,18 @@ func (db *MyDB) EditTask(c echo.Context) error {
 		db.GormDB.Delete(models.WorkingOnUserTask{}, "task_id = ? AND user_id NOT IN (?)", taskID, workingOnIDs)
 	}
 
-	dataArray := make([]interface{}, 1)
-	dataArray[0] = task
-	datatableTask := datatableTask{dataArray}
-	return c.JSONPretty(http.StatusOK, datatableTask, " ")
+	addFlashMessage("success", "تم تعديل التكليف", &c)
+	return c.JSON(http.StatusOK, map[string]string{})
+	//return redirectWithFlashMessage("success", "تم تعديل التكليف", "/", &c)
 }
 
 func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint {
 	username, _ := getUsernameAndClassification(&c)
-	totalUsers, _ := strconv.Atoi(c.FormValue("data[totalUsers]"))
+	totalUsers, _ := strconv.Atoi(c.FormValue("totalUsers"))
 	// gets the value of the total users that were assigned to finish that task
 	var users []uint
 	for i := 0; i < totalUsers; i++ { // loop for the number of the users to add and notify them
-		id := c.FormValue("data[following_users_" + strconv.Itoa(i) + "]") // get the ID of each user
+		id := c.FormValue("following_users_" + strconv.Itoa(i)) // get the ID of each user
 		if id == "" {
 			continue
 		}
@@ -146,16 +143,16 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 	username, _ := getUsernameAndClassification(&c)
 	taskLink := hostDomain + "?hash=" + task.Hash
 	var ids []uint
-	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("data[totalWorkingOnUsers]"))
+	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("totalWorkingOnUsers"))
 	// gets the total number of people that should be called to take an action
 	for i := 0; i < totalWorkingOnPeople; i++ { // loop over the people to add them
 		var userTask models.WorkingOnUserTask
-		userID := c.FormValue("data[people_user_id_" + strconv.Itoa(i) + "]") // get the userTask's userID
+		userID := c.FormValue("people_user_id_" + strconv.Itoa(i)) // get the userTask's userID
 		uid, _ := strconv.ParseUint(userID, 10, 64)
 
-		action := c.FormValue("data[people_action_" + strconv.Itoa(i) + "]")                                     // get the userTask's action
-		finalResponse, _ := strconv.ParseBool(c.FormValue("data[people_finalResponse_" + strconv.Itoa(i) + "]")) // get the boolean indicating weather or not it is a final action
-		notes := c.FormValue("data[people_notes_" + strconv.Itoa(i) + "]")
+		action := c.FormValue("people_action_" + strconv.Itoa(i))                                     // get the userTask's action
+		finalResponse, _ := strconv.ParseBool(c.FormValue("people_finalResponse_" + strconv.Itoa(i))) // get the boolean indicating weather or not it is a final action
+		notes := c.FormValue("people_notes_" + strconv.Itoa(i))
 		if userID == "" { // if no userID is given then continue
 			continue
 		}
@@ -202,17 +199,14 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 
 // this function deletes a task from the database
 func (db *MyDB) RemoveTask(c echo.Context) error {
-	id, err := strconv.Atoi(c.FormValue("id[]")) // gets the id of the task to delete
-	if err != nil || id == 0 {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"message": "Invalid Request",
-		})
-	}
+	hash := c.FormValue("hash") // gets the hash of the task to delete
 	var task models.Task
-	db.GormDB.First(&task, id) // gets the task from the database
-	//task.DeleteChildren(db.GormDB)              // delete any UserTasks assigned to it
-	db.GormDB.Delete(&task)                     // delete the task
-	return c.JSON(http.StatusOK, models.Task{}) // return empty struct to the datatable editor
+	db.GormDB.Where("hash = ?", hash).First(&task) // gets the task from the database
+	if task.ID != 0 {
+		//task.DeleteChildren(db.GormDB)              // delete any UserTasks assigned to it
+		db.GormDB.Delete(&task) // delete the task
+	}
+	return redirectWithFlashMessage("success", "تم الغاء التكليف", "/", &c)
 }
 
 // this function changes the seen value of the user on a task
@@ -251,29 +245,28 @@ func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
 	return nil
 }
 
-// this function gets the parameters of the datatable to send it to `GetPaginatedTasksAndFiles` function
+// this function gets the parameters of the datatable to send it to `GetPaginatedTasks` function
 func (db *MyDB) GetTasks(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // gets the value of userID and classification
 	hash := c.QueryParam("hash")
 	var tasks []models.Task
 	var totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int
-	var files map[string]interface{}
 	q := c.Request().URL.Query() // gets the URL Query as a map
 	draw, _ := strconv.Atoi(q["draw"][0])
 	if hash != "" {
-		tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files = models.GetTask(hash, db.GormDB, classification, userID)
-		dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
+		tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter = models.GetTask(hash, db.GormDB, classification, userID)
+		dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, draw)
 		return c.JSONPretty(http.StatusOK, dt, " ")
 	}
 	start, length, direction, sortedColumnName, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType :=
 		getFilterData(q, classification)
 
-	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files =
-		models.GetPaginatedTasksAndFiles(db.GormDB, start, length,
+	tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter =
+		models.GetPaginatedTasks(db.GormDB, start, length,
 			sortedColumnName, direction, descriptionSearch, sentToSearch, minDateSearch, maxDateSearch,
 			retrieveType, classification, userID)
 
-	dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, files, draw)
+	dt := generateDTOutput(tasks, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter, draw)
 
 	return c.JSONPretty(http.StatusOK, dt, " ")
 }
@@ -310,15 +303,103 @@ func getUserFilterData(q url.Values, classification int) (string, string, string
 	return descriptionSearch, sentToSearch, minDateSearch, maxDateSearch, retrieveType
 }
 
-func generateDTOutput(tasks []models.Task, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int, files map[string]interface{}, draw int) dtOutput {
+func generateDTOutput(tasks []models.Task, totalNumberOfRowsInDatabase, totalNumberOfRowsAfterFilter int, draw int) dtOutput {
 	dt := dtOutput{
 		Draw:            draw,
 		RecordsTotal:    totalNumberOfRowsInDatabase,
 		RecordsFiltered: totalNumberOfRowsAfterFilter,
 		Data:            tasks,
-		Files:           files,
 	}
 	return dt
+}
+
+func (db *MyDB) showTask(c echo.Context) error {
+	userID, classification := getUserStatus(&c)
+	hash := c.Param("hash")
+	username, stringClassification := getUsernameAndClassification(&c)
+	var task models.Task
+	title := "تكليف جديد"
+	buttonText := "تعديل"
+	formUrl := "/tasks/edit"
+	if hash == "new" {
+		if classification != 1 {
+			return redirectWithFlashMessage("failure", "ليس لديك الصلاحيه لهذه الصفحه", "/", &c)
+		}
+		buttonText = "حفظ"
+		formUrl = "/tasks/add"
+	} else {
+		models.PreloadFollowingAndWorkingOnUsers(classification, db.GormDB, userID).
+			Preload("Files", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id, created_at, updated_at, deleted_at, task_id, content_type, hash, file_name, user_id, extension").
+					Order("created_at ASC")
+			}).Preload("Files.User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, username")
+		}).
+			Find(&task, "hash = ?", hash)
+		title = "تعديل التكليف"
+		db.markTaskAsSeen(classification, task.ID, userID)
+	}
+	var followingUsers []models.User
+	var workingOnUsers []models.User
+	// get the followingUsers ordered by the [order] column
+	db.GormDB.Preload("FollowingUserTasks").Order("[order] ASC").Find(&followingUsers, "classification = 2")
+	// get the workingOnUsers ordered by the [order] column
+	db.GormDB.Preload("WorkingOnUserTasks").Order("[order] ASC").Find(&workingOnUsers, "classification = 3")
+
+	for fileNumber, file := range task.Files {
+		task.Files[fileNumber].FileDisplay = file.CreatedAt.String()[0:10] + "  رقم:  " + strconv.Itoa(fileNumber+1) +
+			" الاسم " + file.FileName + "." + file.Extension
+		fmt.Println(task.Files[fileNumber].FileDisplay)
+	}
+
+	return c.Render(http.StatusOK, "create-edit-task.html", echo.Map{
+		"Task":                 task,
+		"buttonText":           buttonText,
+		"classification":       classification,
+		"title":                title,
+		"username":             username,
+		"stringClassification": stringClassification,
+		"followingUsers":       followingUsers,
+		"workingOnUsers":       workingOnUsers,
+		"formUrl":              formUrl,
+	})
+}
+
+func (db *MyDB) markTaskAsSeen(classification int, taskID uint, userID uint) {
+	if classification == 1 {
+		db.GormDB.Model(models.Task{}).Where("id = ?", taskID).Update("seen", true)
+	} else if classification == 2 {
+		db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+			Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false,
+				"new_from_minister": false, "new_from_working_on_user": false})
+	} else if classification == 3 {
+		db.GormDB.Model(models.WorkingOnUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+			Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false})
+	}
+}
+func (db *MyDB) markTaskAsUnseen(c echo.Context) error {
+	userID, classification := getUserStatus(&c)
+	taskID := c.FormValue("task_id") // gets the value of user_id
+	if taskID, _ := strconv.Atoi(taskID); taskID == 0 {
+		return c.JSON(http.StatusOK, echo.Map{
+			"status":  "failure",
+			"message": "يجب حفظ التكليف قبل اعتباره جديد",
+		})
+	}
+	if classification == 1 {
+		db.GormDB.Model(models.Task{}).Where("id = ?", taskID).Update("seen", false)
+	} else if classification == 2 {
+		db.GormDB.Model(models.FollowingUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+			Updates(map[string]interface{}{"seen": true, "marked_as_unseen": true,
+				"new_from_minister": false, "new_from_working_on_user": false})
+	} else if classification == 3 {
+		db.GormDB.Model(models.WorkingOnUserTask{}).Where("task_id = ? AND user_id = ?", taskID, userID).
+			Updates(map[string]interface{}{"seen": true, "marked_as_unseen": true})
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"status":  "success",
+		"message": "تم اعتبار التكليف كأنه جديد",
+	})
 }
 
 // struct to return the datatable rows in the correct format

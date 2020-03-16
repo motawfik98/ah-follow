@@ -129,3 +129,11 @@ body::after {
     line-height: 25px;
     margin: 0;
 }
+
+.custom-file-input ~ .custom-file-label::after {
+    content: "بحث";
+}
+
+.custom-file-control.selected:lang(ar)::after {
+    content: "" !important;
+}

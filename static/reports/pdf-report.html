@@ -50,7 +50,7 @@
 
     {{range $taskNumber, $task := .Tasks}}
         <tr>
-            <td>{{$taskNumber}}</td>
+            <td>{{incrementOne $taskNumber}}</td>
             <td>{{$task.Description}}</td>
             <td>{{ printf "%.10s" $task.CreatedAt }}</td>
             <td>{{$task.FinalAction.String}}</td>
