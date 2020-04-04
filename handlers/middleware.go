@@ -1,39 +1,72 @@
 package handlers
 
 import (
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"net/http"
 )
+
+// this function ensures that the request is coming from logged in user
+var ensureLoggedIn = middleware.JWTWithConfig(middleware.JWTConfig{
+	ErrorHandler: func(e error) error {
+		return raiseNewHTTPError(http.StatusUnauthorized, "true", "/login", "failure", "يجب تسجيل الدخول")
+	},
+	SigningKey:  []byte("very-secret-key-to-encode-tokens"),
+	TokenLookup: "cookie:Authorization",
+})
 
 // this function ensures that the request is coming from non-logged in user
 func ensureNotLoggedIn(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sess, _ := session.Get("authorization", c) // gets the session with name `authorization`
-		if sess.Values["user_id"] == nil {         // if the value of `user_id` is null then there's no logged in user
-			return next(c) // continue the request
+		cookieValue := c.Get("user")
+		if cookieValue == nil {
+			return next(c)
 		}
-		sess = getSession("flash", &c)               // gets the session with value `flash`
-		sess.AddFlash("failure", "status")           // add a key value pairs of (status, failure)
-		sess.AddFlash("يجب تسجيل الخروج", "message") // add a key value pair of (message, ...)
-		_ = sess.Save(c.Request(), c.Response())     // save the `flash` session
-		return c.Redirect(http.StatusFound, "/")     // redirect to home page, and there show the user the flash message
+		return raiseNewHTTPError(http.StatusUnauthorized, "true", "/", "failure", "يجب تسجيل الخروج")
 	}
 }
 
-// this function ensures that the request is coming from logged in user
-func ensureLoggedIn(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		sess, _ := session.Get("authorization", c) // gets the session with name `authorization`
-		if sess.Values["user_id"] != nil {         // if the value of `user_id` is not null then there's logged in user
-			return next(c) // continue the request
+func customHTTPErrorHandler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+	withFlash := "true"
+	flashStatus := "failure"
+	flashMessage := "حدث خطأ ما برجاء المحاوله مره اخرى او التواصل مع المسؤول"
+	redirectLink := "/"
+
+	if he, ok := err.(*echo.HTTPError); ok {
+		code = he.Code
+		switch he.Message.(type) {
+		case map[string]string:
+			redirectMap := he.Message.(map[string]string)
+			withFlash = redirectMap["withFlash"]
+			redirectLink = redirectMap["redirectLink"]
+			flashStatus = redirectMap["flashStatus"]
+			flashMessage = redirectMap["flashMessage"]
+		case string:
+			flashMessage = he.Message.(string)
 		}
-		sess = getSession("flash", &c)                // gets the session with value `flash`
-		sess.AddFlash("failure", "status")            // add a key value pairs of (status, failure)
-		sess.AddFlash("يجب تسجيل الدخول", "message")  // add a key value pair of (message, ...)
-		_ = sess.Save(c.Request(), c.Response())      // save the `flash` session
-		return c.Redirect(http.StatusFound, "/login") // redirect to login page, and there show the user the flash message
+
+	}
+
+	if code != 200 {
+		if checkIfRequestFromMobileDevice(c) {
+			_ = c.JSON(http.StatusBadRequest, echo.Map{
+				"url":     redirectLink,
+				"status":  flashStatus,
+				"message": flashMessage,
+			})
+		} else {
+			if withFlash == "true" {
+				sess := getSession("flash", &c)          // gets the session with value `flash`
+				sess.AddFlash(flashStatus, "status")     // add a key value pairs of (status, failure)
+				sess.AddFlash(flashMessage, "message")   // add a key value pair of (errorMessage, ...)
+				_ = sess.Save(c.Request(), c.Response()) // save the `flash` session
+			}
+			_ = c.Redirect(http.StatusFound, redirectLink) // redirect to home page, and there show the user the flash errorMessage
+		}
 	}
 }
 
@@ -54,12 +87,17 @@ func ensureAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 		if classification == 1 {
 			return next(c) // the user is an admin, continue the request
 		}
-		sess := getSession("flash", &c)                                    // gets the session with value `flash`
-		sess.AddFlash("failure", "status")                                 // add a key value pairs of (status, failure)
-		sess.AddFlash("عفوا, ليس لديك الصلاحيه لأتمام العمليه", "message") // add a key value pair of (message, ...)
-		_ = sess.Save(c.Request(), c.Response())                           // save the `flash` session
-		return c.Redirect(http.StatusFound, "/")                           // redirect to home page, and there show the user the flash message
+		return raiseNewHTTPError(http.StatusUnauthorized, "true", "/", "failure", "عفوا, ليس لديك الصلاحيه لأتمام العمليه")
 	}
+}
+
+func raiseNewHTTPError(statusCode int, withFlash, redirectLink, flashStatus, flashMessage string) error {
+	return echo.NewHTTPError(statusCode, map[string]string{
+		"withFlash":    withFlash,
+		"redirectLink": redirectLink,
+		"flashStatus":  flashStatus,
+		"flashMessage": flashMessage,
+	})
 }
 
 // this function gets the session with the given name
@@ -67,21 +105,28 @@ func getSession(sessionName string, c *echo.Context) *sessions.Session {
 	sess, _ := session.Get(sessionName, *c)
 	sess.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   0, // to enforce the browser to logout after the session was closed
+		MaxAge:   10, // to enforce the browser to logout after the session was closed
 		HttpOnly: true,
 	}
 	return sess
 }
 
+// this function gets the session with the given name
+func getToken(c *echo.Context) jwt.MapClaims {
+	user := (*c).Get("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	return claims
+}
+
 // this function returns the user_id and the classification values that were stored in the session cookie
 func getUserStatus(c *echo.Context) (uint, int) {
-	sess := getSession("authorization", c)
-	return sess.Values["user_id"].(uint), sess.Values["classification"].(int)
+	sess := getToken(c)
+	return uint(sess["user_id"].(float64)), int(sess["classification"].(float64))
 }
 
 func getUsernameAndClassification(c *echo.Context) (string, string) {
-	sess := getSession("authorization", c)
-	return sess.Values["username"].(string), sess.Values["stringClassification"].(string)
+	sess := getToken(c)
+	return sess["username"].(string), sess["stringClassification"].(string)
 }
 
 // this function deletes the session cookie from the browser (useful in logout)
@@ -121,4 +166,11 @@ func getFormData(c *echo.Context, names []string) map[string]string {
 
 	deleteSession(sess, *c) // deletes the session with name `formData` to avoid taking it once more in the future
 	return values           // returns the status and message
+}
+
+// this function checks if the request is coming from a mobile device or a normal browser
+// as if it's coming from a mobile device then the JSON response is returned
+// while from a normal browser the whole page is required
+func checkIfRequestFromMobileDevice(c echo.Context) bool {
+	return c.Request().Header.Get("mobile-request") == "true"
 }

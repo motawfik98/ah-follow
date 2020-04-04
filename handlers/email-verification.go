@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (db *MyDB) changeEmail(c echo.Context) error {
+func (db *MyConfigurations) changeEmail(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	db.GormDB.First(&user, userID)
@@ -35,7 +35,7 @@ func (db *MyDB) changeEmail(c echo.Context) error {
 	return db.sendVerificationLink(c)
 }
 
-func (db *MyDB) sendVerificationLink(c echo.Context) error {
+func (db *MyConfigurations) sendVerificationLink(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	db.GormDB.First(&user, userID)
@@ -56,7 +56,8 @@ func (db *MyDB) sendVerificationLink(c echo.Context) error {
 	sendVerificationLink(&user, link)
 	addFlashMessage("success", "تم ارسال البريد الالكتروني للتفعيل", &c)
 	return c.JSON(http.StatusOK, map[string]string{
-		"status": "success",
+		"status":  "success",
+		"message": "تم ارسال البريد الالكتروني للتفعيل",
 	})
 }
 
@@ -169,15 +170,14 @@ func sendEmailNotification(user *models.User, taskLink, from, emailBody string) 
 	sendEmail(user.Email, emailHTML, emailText, "اشعار من "+from)
 }
 
-func (db *MyDB) verifyEmail(c echo.Context) error {
-	userID, _ := getUserStatus(&c)
+func (db *MyConfigurations) verifyEmail(c echo.Context) error {
 	var user models.User
 	var otp models.OTP
-	db.GormDB.First(&user, userID)
 	submittedEmail := c.QueryParam("email")
 	submittedHash := c.QueryParam("hash")
 
-	db.GormDB.Where("user_id = ? AND email = ? AND verification_code = ?", userID, submittedEmail, submittedHash).First(&otp) // get all the not deleted OTPs from the database for that specific user and email
+	db.GormDB.Where("email = ? AND verification_code = ?", submittedEmail, submittedHash).First(&otp) // get all the not deleted OTPs from the database for that specific user and email
+	db.GormDB.First(&user, otp.UserID)
 	if user.Email != submittedEmail {
 		return redirectWithFlashMessage("failure", "تأكد من الدخول بالحساب الصحيح", "/", &c)
 	}
@@ -185,8 +185,9 @@ func (db *MyDB) verifyEmail(c echo.Context) error {
 	if otp.ID != 0 { // if the number was successfully verified
 		db.GormDB.Model(&user).Update("valid_email", true)
 		db.GormDB.Model(&otp).Update("used", true)
-		db.GormDB.Where("user_id = ? AND email = ?", userID, user.Email).Delete(models.OTP{})
-		return redirectWithFlashMessage("success", "تم تفعيل البريد الالكتروني", "/user-settings", &c)
+		db.GormDB.Where("user_id = ? AND email = ?", user.ID, user.Email).Delete(models.OTP{})
+		message := "تم تفعيل البريد الالكتروني الخاص ب" + "(" + user.Username + ")"
+		return redirectWithFlashMessage("success", message, "/user-settings", &c)
 	} else {
 		return redirectWithFlashMessage("failure", "عفوا حدث خطأ ما برجاء المحاوله مره اخري او اعاده ارسال رابط التفعيل", "/user-settings", &c)
 	}

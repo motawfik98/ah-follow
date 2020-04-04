@@ -150,7 +150,7 @@ func PreloadFollowingAndWorkingOnUsers(classification int, db *gorm.DB, userID u
 	if classification == 3 {
 		db = db.Preload("WorkingOnUsers", func(db *gorm.DB) *gorm.DB {
 			return db.Where("working_on_user_tasks.user_id = ?", userID)
-		})
+		}).Preload("WorkingOnUsers.User")
 		db = db.Preload("FollowingUsers", func(db *gorm.DB) *gorm.DB {
 			return db.Where("following_user_tasks.user_id IN (?)",
 				db.Table("working_on_user_tasks").Select("working_on_user_tasks.follower_id").
@@ -168,12 +168,12 @@ func getTotalNumberOfRecordsInDatabase(classification int, db *gorm.DB, userID u
 		// join the user_tasks table to get only the tasks that were assigned to the logged in user
 		db = db.Table("tasks").Joins("JOIN following_user_tasks user_tasks " +
 			"ON user_tasks.task_id = tasks.id")
-		db = db.Where("user_tasks.user_id = ?", userID)
+		db = db.Where("user_tasks.user_id = ? AND user_tasks.deleted_at IS NULL", userID)
 	} else if classification == 3 {
 		// join the user_tasks table to get only the tasks that were assigned to the logged in user
 		db = db.Table("tasks").Joins("JOIN working_on_user_tasks user_tasks " +
 			"ON user_tasks.task_id = tasks.id")
-		db = db.Where("user_tasks.user_id = ?", userID)
+		db = db.Where("user_tasks.user_id = ? AND user_tasks.deleted_at IS NULL", userID)
 	}
 	db.Model(&Task{}).Count(&totalNumberOfRowsInDatabase)
 	// gets the total number of records available for that specific user (or admin)

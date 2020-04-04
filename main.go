@@ -23,6 +23,7 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 
 func main() {
 	db, _ := configurations.InitDB()
+	messagingClient := configurations.CreateMessagingClient()
 
 	e := echo.New()
 	//e.Pre(middleware.HTTPSRedirect())
@@ -37,8 +38,11 @@ func main() {
 		templates: template.Must(template.ParseGlob("static/*.html")),
 	}
 
-	myDb := handlers.MyDB{GormDB: db}
-	handlers.InitializeRoutes(e, &myDb)
+	myConfigurations := handlers.MyConfigurations{
+		GormDB:          db,
+		MessagingClient: messagingClient,
+	}
+	handlers.InitializeRoutes(e, &myConfigurations)
 
 	//e.Logger.Fatal(e.StartAutoTLS(":443"))
 	e.Logger.Fatal(e.Start(":8085"))

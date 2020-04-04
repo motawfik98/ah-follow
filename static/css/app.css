@@ -91,6 +91,10 @@ html {
     background: url(../img/settings.svg) center center no-repeat;
 }
 
+.navbar #btnLock {
+    background: url(../img/lock.svg) center center no-repeat;
+}
+
 .recordset.even {
     background-color: #ffffff;
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (db *MyDB) validateAndSaveFile(fileGiven *multipart.FileHeader, taskID, userID uint) uint {
+func (db *MyConfigurations) validateAndSaveFile(fileGiven *multipart.FileHeader, taskID, userID uint) uint {
 	file := models.File{}
 
 	src, err := fileGiven.Open()
@@ -35,11 +35,11 @@ func (db *MyDB) validateAndSaveFile(fileGiven *multipart.FileHeader, taskID, use
 	return file.ID
 }
 
-func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
+func linkFiles(db *MyConfigurations, c *echo.Context, taskID uint) {
 	userID, _ := getUserStatus(c)
 	context := *c
 	formFiles, _ := context.MultipartForm()
-	files := formFiles.File["files"]
+	files := formFiles.File["files[]"]
 
 	for _, file := range files {
 		db.validateAndSaveFile(file, taskID, userID)
@@ -59,7 +59,7 @@ func linkFiles(db *MyDB, c *echo.Context, taskID uint) {
 	db.GormDB.Delete(models.File{}, "task_id = ? AND hash IN (?)", taskID, deletedFilesHashes)
 }
 
-func (db *MyDB) showFile(c echo.Context) error {
+func (db *MyConfigurations) showFile(c echo.Context) error {
 	//userID, classification := getUserStatus(&c)
 	hash := c.Param("hash")
 	var file models.File
@@ -81,6 +81,10 @@ func (db *MyDB) showFile(c echo.Context) error {
 
 func displayFile(context *echo.Context, file models.File) error {
 	c := *context
+	if checkIfRequestFromMobileDevice(c) {
+		c.Response().Header().Set("Content-Type", file.ContentType)
+		return c.Blob(http.StatusOK, file.ContentType, file.Bytes)
+	}
 	c.Response().Header().Set("Content-Type", file.ContentType)
 	c.Response().Header().Set("content-disposition", "inline;filename="+file.FileName+"."+file.Extension)
 	c.Response().Header().Set("Cache-control", "must-revalidate, post-check=0, pre-check=0")

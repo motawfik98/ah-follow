@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (db *MyDB) generatePDF(c echo.Context) error {
+func (db *MyConfigurations) generatePDF(c echo.Context) error {
 	wkhtmltopdf.SetPath("C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")
 
 	r := NewRequestPdf("")

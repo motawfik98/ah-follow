@@ -16,7 +16,7 @@ type datatableTask struct {
 }
 
 // this function adds task to the database
-func (db *MyDB) AddTask(c echo.Context) error {
+func (db *MyConfigurations) AddTask(c echo.Context) error {
 	taskToSave := models.Task{
 		Description: c.FormValue("description"), // gets the value of the description from the form that was submitted
 	}
@@ -32,11 +32,14 @@ func (db *MyDB) AddTask(c echo.Context) error {
 	db.GormDB.Preload("FollowingUsers").Preload("WorkingOnUsers").Find(&taskToSave, taskToSave.ID)
 
 	addFlashMessage("success", "تم انشاء التكليف", &c)
-	return c.JSON(http.StatusOK, map[string]string{})
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "success",
+		"message": "تم انشاء التكليف",
+	})
 }
 
 // this function edits an existing task
-func (db *MyDB) EditTask(c echo.Context) error {
+func (db *MyConfigurations) EditTask(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // gets the user status (id, classification)
 	username, _ := getUsernameAndClassification(&c)
 	taskID, err := strconv.Atoi(c.FormValue("id")) // gets the ID of the requested task to edit
@@ -54,7 +57,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	taskLink := hostDomain + "?" + task.Hash
 
 	if classification == 1 { // if the logged in user is an admin, then he could change the description of the task
-		db.GormDB.Model(&task).UpdateColumn("description", description)
+		db.GormDB.Model(&task).Update("description", description)
 	}
 	if finalAction != task.FinalAction.String { // if the final_action given by the user is different than that in the database
 		var admins []models.User
@@ -69,6 +72,7 @@ func (db *MyDB) EditTask(c echo.Context) error {
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
 			pushNotificationLink := "/?hash=" + task.Hash
+			var adminsIDs = make([]uint, len(admins))
 			for _, admin := range admins {
 				sendNotification("تم تعديل الاجراء النهائي للتكليف", admin.ID, db, pushNotificationLink)
 				if admin.EmailNotifications {
@@ -77,7 +81,10 @@ func (db *MyDB) EditTask(c echo.Context) error {
 				if admin.PhoneNotifications {
 					sendPhoneNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
 				}
+				adminsIDs = append(adminsIDs, admin.ID)
+				models.AddNotificationToDatabase(db.GormDB, admin.ID, task.ID, 0, 2, "تعديل الاجراء النهائي")
 			}
+			gatherUsersToSendNotifications(db, adminsIDs, "تعديل الاجراء النهائي", &task)
 		}
 	}
 
@@ -106,15 +113,19 @@ func (db *MyDB) EditTask(c echo.Context) error {
 	}
 
 	addFlashMessage("success", "تم تعديل التكليف", &c)
-	return c.JSON(http.StatusOK, map[string]string{})
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "success",
+		"message": "تم تعديل التكليف",
+	})
 	//return redirectWithFlashMessage("success", "تم تعديل التكليف", "/", &c)
 }
 
-func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint {
+func addFollowersUsers(c echo.Context, db *MyConfigurations, taskToSave models.Task) []uint {
 	username, _ := getUsernameAndClassification(&c)
 	totalUsers, _ := strconv.Atoi(c.FormValue("totalUsers"))
 	// gets the value of the total users that were assigned to finish that task
-	var users []uint
+	var users = make([]uint, totalUsers)
+	taskLink := hostDomain + "?hash=" + taskToSave.Hash
 	for i := 0; i < totalUsers; i++ { // loop for the number of the users to add and notify them
 		id := c.FormValue("following_users_" + strconv.Itoa(i)) // get the ID of each user
 		if id == "" {
@@ -123,7 +134,7 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 		uid, _ := strconv.ParseUint(id, 10, 64)
 		isNew := models.CreateFollowingUserTask(db.GormDB, taskToSave.ID, uint(uid)) // creates a FollowingUserTask to the database
 		users = append(users, uint(uid))                                             // append the id to the users array
-		taskLink := hostDomain + "?hash=" + taskToSave.Hash
+
 		if isNew {
 			var user models.User
 			db.GormDB.Find(&user, uid)
@@ -134,16 +145,19 @@ func addFollowersUsers(c echo.Context, db *MyDB, taskToSave models.Task) []uint 
 			if user.PhoneNotifications {
 				sendPhoneNotification(&user, taskLink, username, "تكليف جديد")
 			}
+			models.AddNotificationToDatabase(db.GormDB, user.ID, taskToSave.ID, 0, 1, "تكليف جديد")
 		}
 	}
+	gatherUsersToSendNotifications(db, users, "تكليف جديد", &taskToSave)
 	return users
 }
 
-func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classification int, followerID uint) []uint {
+func addWorkingOnUsers(c echo.Context, db *MyConfigurations, task *models.Task, classification int, followerID uint) []uint {
 	username, _ := getUsernameAndClassification(&c)
 	taskLink := hostDomain + "?hash=" + task.Hash
-	var ids []uint
 	totalWorkingOnPeople, _ := strconv.Atoi(c.FormValue("totalWorkingOnUsers"))
+	var ids = make([]uint, totalWorkingOnPeople)
+
 	// gets the total number of people that should be called to take an action
 	for i := 0; i < totalWorkingOnPeople; i++ { // loop over the people to add them
 		var userTask models.WorkingOnUserTask
@@ -170,6 +184,8 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 				if user.PhoneNotifications {
 					sendPhoneNotification(&user, taskLink, username, "تكليف جديد")
 				}
+				models.AddNotificationToDatabase(db.GormDB, user.ID, task.ID, 0, 1, "تكليف جديد")
+				gatherUsersToSendNotifications(db, []uint{user.ID}, "تكليف جديد", task)
 			}
 		} else { // if found edit his data
 			if classification == 2 {
@@ -188,6 +204,8 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 				if user.PhoneNotifications {
 					sendPhoneNotification(&followerUser, taskLink, username, "استجابه")
 				}
+				models.AddNotificationToDatabase(db.GormDB, userTask.FollowerID, task.ID, user.ID, 3, "استجابه من القائم به")
+				gatherUsersToSendNotifications(db, []uint{userTask.FollowerID}, "تم اضافه رد على التكليف من القائم به", task)
 			}
 			db.GormDB.Save(&userTask)
 			id = userTask.UserID
@@ -198,7 +216,7 @@ func addWorkingOnUsers(c echo.Context, db *MyDB, task *models.Task, classificati
 }
 
 // this function deletes a task from the database
-func (db *MyDB) RemoveTask(c echo.Context) error {
+func (db *MyConfigurations) RemoveTask(c echo.Context) error {
 	hash := c.FormValue("hash") // gets the hash of the task to delete
 	var task models.Task
 	db.GormDB.Where("hash = ?", hash).First(&task) // gets the task from the database
@@ -206,11 +224,17 @@ func (db *MyDB) RemoveTask(c echo.Context) error {
 		//task.DeleteChildren(db.GormDB)              // delete any UserTasks assigned to it
 		db.GormDB.Delete(&task) // delete the task
 	}
+	if checkIfRequestFromMobileDevice(c) {
+		return c.JSON(http.StatusOK, echo.Map{
+			"status":  "success",
+			"message": "تم الغاء التكليف",
+		})
+	}
 	return redirectWithFlashMessage("success", "تم الغاء التكليف", "/", &c)
 }
 
 // this function changes the seen value of the user on a task
-func (db *MyDB) ChangeUserSeen(c echo.Context) error {
+func (db *MyConfigurations) ChangeUserSeen(c echo.Context) error {
 	seen, _ := strconv.ParseBool(c.FormValue("seen"))
 	taskID := c.FormValue("task_id") // gets the value of task_id
 	userID := c.FormValue("user_id") // gets the value of user_id
@@ -238,7 +262,7 @@ func (db *MyDB) ChangeUserSeen(c echo.Context) error {
 }
 
 // this function changes the value of the task seen from the admin's account
-func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
+func (db *MyConfigurations) ChangeTaskSeen(c echo.Context) error {
 	seen := c.FormValue("seen")
 	taskID := c.FormValue("task_id") // gets the value of task_id
 	db.GormDB.Model(models.Task{}).Where("id = ?", taskID).Update("seen", seen)
@@ -246,7 +270,7 @@ func (db *MyDB) ChangeTaskSeen(c echo.Context) error {
 }
 
 // this function gets the parameters of the datatable to send it to `GetPaginatedTasks` function
-func (db *MyDB) GetTasks(c echo.Context) error {
+func (db *MyConfigurations) GetTasks(c echo.Context) error {
 	userID, classification := getUserStatus(&c) // gets the value of userID and classification
 	hash := c.QueryParam("hash")
 	var tasks []models.Task
@@ -313,7 +337,7 @@ func generateDTOutput(tasks []models.Task, totalNumberOfRowsInDatabase, totalNum
 	return dt
 }
 
-func (db *MyDB) showTask(c echo.Context) error {
+func (db *MyConfigurations) showTask(c echo.Context) error {
 	userID, classification := getUserStatus(&c)
 	hash := c.Param("hash")
 	username, stringClassification := getUsernameAndClassification(&c)
@@ -352,7 +376,15 @@ func (db *MyDB) showTask(c echo.Context) error {
 		fmt.Println(task.Files[fileNumber].FileDisplay)
 	}
 
-	return c.Render(http.StatusOK, "create-edit-task.html", echo.Map{
+	isClickedFromNotificationPanel := c.Request().Header.Get("from-notification")
+	if isClickedFromNotificationPanel != "" {
+		isFromNotification, err := strconv.ParseBool(isClickedFromNotificationPanel)
+		if isFromNotification && (err == nil) {
+			models.MarkNotificationAsClicked(db.GormDB, userID, task.ID)
+		}
+	}
+
+	valuesToReturn := echo.Map{
 		"Task":                 task,
 		"buttonText":           buttonText,
 		"classification":       classification,
@@ -362,10 +394,14 @@ func (db *MyDB) showTask(c echo.Context) error {
 		"followingUsers":       followingUsers,
 		"workingOnUsers":       workingOnUsers,
 		"formUrl":              formUrl,
-	})
+	}
+	if checkIfRequestFromMobileDevice(c) {
+		return c.JSON(http.StatusOK, valuesToReturn)
+	}
+	return c.Render(http.StatusOK, "create-edit-task.html", valuesToReturn)
 }
 
-func (db *MyDB) markTaskAsSeen(classification int, taskID uint, userID uint) {
+func (db *MyConfigurations) markTaskAsSeen(classification int, taskID uint, userID uint) {
 	if classification == 1 {
 		db.GormDB.Model(models.Task{}).Where("id = ?", taskID).Update("seen", true)
 	} else if classification == 2 {
@@ -377,7 +413,7 @@ func (db *MyDB) markTaskAsSeen(classification int, taskID uint, userID uint) {
 			Updates(map[string]interface{}{"seen": true, "marked_as_unseen": false})
 	}
 }
-func (db *MyDB) markTaskAsUnseen(c echo.Context) error {
+func (db *MyConfigurations) markTaskAsUnseen(c echo.Context) error {
 	userID, classification := getUserStatus(&c)
 	taskID := c.FormValue("task_id") // gets the value of user_id
 	if taskID, _ := strconv.Atoi(taskID); taskID == 0 {
@@ -409,4 +445,11 @@ type dtOutput struct {
 	RecordsFiltered int                    `json:"recordsFiltered"`
 	Data            []models.Task          `json:"data"`
 	Files           map[string]interface{} `json:"files"`
+}
+
+func gatherUsersToSendNotifications(db *MyConfigurations, users []uint, notificationTitle string, task *models.Task) {
+	var userDevices []string // get all registered devices for a specific user
+	db.GormDB.Table("device_tokens").Where("user_id IN (?)", users).Pluck("token", &userDevices)
+	//usersTokens = append(usersTokens, userDevices...)
+	sendFirebaseNotificationToMultipleUsers(db.MessagingClient, userDevices, notificationTitle, task)
 }

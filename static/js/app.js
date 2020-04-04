@@ -302,7 +302,8 @@ function configureTableForNonAdmins() {
 }
 
 
-function showPeopleActions() {
+function
+showPeopleActions() {
     let $markAsSeen = $('#markAsSeen');
     $markAsSeen.on('click', function () {
         $.post("mark-as-unseen", {
@@ -409,7 +410,7 @@ function sendExtraFormDataAndValidate() {
             formData.append("people_user_id_" + i, $('#user_id_' + (i + 1) + '_repeat').val());
             formData.append("people_action_" + i, $('#action_' + (i + 1) + '_repeat').val());
             formData.append("people_notes_" + i, $('#workingOnNotes_' + (i + 1) + '_repeat').val());
-            formData.append("people_finalResponse_" + i, $('#finalResponse_' + (i + 1) + '_repeat').val());
+            formData.append("people_finalResponse_" + i, $('#finalResponse_' + (i + 1) + '_repeat').prop('checked'));
         }
 
         let numberOfDeletedFiles = deletedFiles.length;

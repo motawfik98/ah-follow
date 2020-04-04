@@ -1,0 +1,212 @@
+{{define "create-edit-task.html"}}
+    {{template "header".}}
+
+    <script>
+        let classification = {{.classification}};
+        let task = {{.Task}};
+    </script>
+
+    <h1>{{.title}}</h1>
+
+
+    <button type="button" class="btn btn-link" id="markAsSeen">اعتباره جديد</button>
+    <div id="seen-feedback" class="flash"></div>
+
+    <form action="{{.formUrl}}" method="post" id="addEditForm" class="addEditForm" novalidate
+          enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="description">التكليف</label>
+            <textarea name="description" rows="5" class="form-control" id="description" required minlength="1"
+                      {{if ne .classification 1}}disabled readonly{{end}}
+            >{{.Task.Description}}</textarea>
+            <div class="invalid-feedback">
+                يجب كتابه التكليف قبل الحفظ
+            </div>
+        </div>
+
+
+        {{if ne .classification 3}}
+            <div class="form-group">
+                <label for="final_action">الاجراء النهائي</label>
+                <textarea name="final_action" rows="5" class="form-control" id="final_action"
+                          {{if ne .classification 2}}disabled readonly{{end}}
+                >{{.Task.FinalAction.String}}</textarea>
+            </div>
+
+            <div class="custom-file" id="fileUploadForm" lang="ar">
+                <input type="file" class="custom-file-input" id="customFile" multiple name="files[]">
+                <label class="custom-file-label" for="customFile">رفع ملف</label>
+            </div>
+        {{end}}
+
+        <fieldset class="border p-2" id="display-old-files">
+            <legend>الملفات المحفوظه</legend>
+            <ul class="list-group" id="old-files">
+                {{range .Task.Files}}
+                    <li class="list-group-item justify-content-between align-items-center">
+                        <a href="/tasks/file/{{.Hash}}" target="_blank">{{.FileDisplay}}</a>
+                        {{if ne $.classification 3}}
+                            {{if eq $.username .User.Username}}
+                                <span class="float-right">
+                                    <input type="hidden" value="{{.FileName}}">
+                                <span class="badge badge-info badge-pill file-edit" data-toggle="modal"
+                                      data-target="#editFileModal"
+                                      style="cursor:pointer">تعديل</span>
+                                <span class="badge badge-danger badge-pill file-deletion delete"
+                                      style="cursor:pointer">مسح</span>
+                                </span>
+                                <input type="hidden" value="{{.Hash}}">
+                                <p class="file-new-name m-0"></p>
+                            {{else}}
+                                <span>تم الرفع بواسطه {{.User.Username}}</span>
+                            {{end}}
+                        {{end}}
+                    </li>
+                {{end}}
+            </ul>
+        </fieldset>
+
+
+        {{if ne .classification 3}}
+            <fieldset class="border p-2" id="display-new-files">
+                <legend>الملفات المراد حفظها (برجاء الضغط على زر الحفظ/التعديل عند الانتهاء)</legend>
+                <input type="file" style="display:none" id="all-uploaded-files">
+                <ul class="list-group" id="new-files"></ul>
+            </fieldset>
+        {{end}}
+
+        <fieldset class="border p-2">
+            <legend>المتابع</legend>
+            <select class="form-control js-select2" multiple="multiple" id="selectedFollowingUsers">
+                <option></option>
+                {{range .followingUsers}}
+                    <option value="{{.ID}}">{{.Username}}</option>
+                {{end}}
+            </select>
+        </fieldset>
+
+        <fieldset class="border p-2">
+            <legend>اسم القائم به وموقفه</legend>
+            <div id="czContainer">
+                <div id="first">
+                    <div class="recordset">
+                        <div class="form-row m-3">
+                            <div class="col-12 col-md-4">
+                                <input type="hidden" name="id_1_repeat" id="id_1_repeat" class="repeat_form">
+                                <select class="form-control workingOn-select2 repeat_form" id="user_id_1_repeat"
+                                        name="user_id_1_repeat"
+                                        style="width:100%">
+                                    <option></option>
+                                    {{range .workingOnUsers}}
+                                        <option value="{{.ID}}">{{.Username}}</option>
+                                    {{end}}
+                                </select>
+                                <div class="invalid-feedback" id="userID-feedback">
+                                    يجب تحديد اسم القائم به
+                                </div>
+                            </div>
+                            <div class="col-12 col-md form-group">
+                                <input type="text" name="action_1_repeat" class="form-control repeat_form"
+                                       id="action_1_repeat"
+                                       placeholder="الموقف">
+                                <div class="invalid-feedback">
+                                    يجب ان تحدد الموقف قبل اعتباره الاخير
+                                </div>
+                            </div>
+                            <div class="col-1 form-check pl-3">
+                                <input type="checkbox" class="form-check-input repeat_form"
+                                       id="finalResponse_1_repeat">
+                                <label class="form-check-label" for="finalResponse_1_repeat">موقف نهائي</label>
+                            </div>
+                            {{if ne .classification 1}}
+                                <div class="col-12">
+                                    <label for="workingOnNotes_1_repeat">ملاحظات القائم به</label>
+                                    <textarea name="workingOnUserNotes" id="workingOnNotes_1_repeat"
+                                              style="width:100%"
+                                              {{if ne .classification 3}} readonly disabled {{end}}rows="2"></textarea>
+                                </div>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+
+        <div class="pb-2">
+            <button type="submit" class="btn btn-primary" id="btn-form-submit">{{.buttonText}}</button>
+            <div class="invalid-feedback" id="form-validation">
+                حدث خطأ في البيانات برجاء مراجعتها
+            </div>
+        </div>
+
+        <div>
+            {{if eq .classification 1}}
+                <button type="button" class="btn btn-danger mr-2" data-toggle="modal" data-target="#deleteModal">مسح
+                    التكليف
+                </button>
+            {{end}}
+            <a class="btn btn-secondary" role="button" href="/">رجوع وتجاهل التغييرات</a>
+        </div>
+
+    </form>
+
+
+
+    <div class="modal fade" tabindex="-1" role="dialog" id="deleteModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">الغاء التكليف</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>هل انت متأكد من الغاء التكليف ؟</p>
+                    <p>برجاء العلم انك لن تسطيع اعادته الا بالتواصل مع المسؤول</p>
+                </div>
+                <div class="modal-footer">
+                    <form action="/tasks/remove" id="deleteForm" method="post">
+                        <button type="submit" class="btn btn-danger">مسح التكليف</button>
+                        <input type="hidden" name="hash" value="{{.Task.Hash}}">
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" tabindex="-1" role="dialog" id="editFileModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل الملف</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>تعديل الملف</p>
+                    <div class="form-group">
+                        <label for="file-edit-name">اسم الملف</label>
+                        <input type="text" id="file-edit-name" class="form-control">
+                        <input type="hidden" id="file-edit-hash">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" data-dismiss="modal" id="btn-edit-file">تعديل</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btn-restore-name">استعاده
+                        الاسم الاصلي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/jquery.czMore-latest.js" charset="utf-8"></script>
+
+    {{template "footer".}}
+
+{{end}}

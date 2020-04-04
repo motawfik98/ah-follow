@@ -8,64 +8,73 @@
                 <article class="card-body">
                     <h4 class="card-title mb-4 mt-1">{{.title}}</h4>
                     <form action="{{.formAction}}" method="post">
-                        <div class="form-group">
-                            <label for="username">اسم المستخدم</label>
-                            {{if .users}}
-                                <select class="form-control js-select2" id="username" name="username">
-                                    <option></option>
-                                    {{range .users}}
-                                        <option value="{{.Username}}">{{.Username}}</option>
-                                    {{end}}
-                                </select>
-                            {{else}}
-                                <input type="text" name="username" class="form-control" id="username"
-                                       value="{{.username}}"
-                                       placeholder="اسم المستخدم">
-                            {{end}}
-                        </div>
-                        <div class="form-row">
-                            <div class="col">
-                                <label for="password">كلمه السر</label>
-                                <input type="password" name="password" class="form-control" id="password"
-                                       placeholder="كلمه السر">
-                            </div>
-                            <div class="col">
-                                <label for="passwordVerify">تأكيد كلمه السر</label>
-                                <input type="password" name="passwordVerify" class="form-control" id="passwordVerify"
-                                       placeholder="تأكيد كلمه السر">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="adminPassword">كلمه السر الخاصه بالوزير</label>
-                            <input type="password" name="adminPassword" class="form-control" id="adminPassword"
-                                   aria-describedby="adminPasswordHelp" placeholder="{{.adminPasswordPlaceholder}}">
-                            <small id="adminPasswordHelp" class="form-text text-muted">
-                                {{.adminPasswordHelp}}
-                            </small>
-
-                        </div>
-                        {{if .isSignUp}}
+                        {{if .resetPage}}
                             <div class="form-group">
-                                <label for="classification">التصنيف</label>
-                                <select class="form-control" id="classification" name="classification">
-                                    <option value="1" {{if eq .classification "1"}}selected{{end}}>الوزير</option>
-                                    <option value="2" {{if eq .classification "2"}}selected{{end}}>متابع</option>
-                                    <option value="3"
-                                            {{if or (eq .classification "") (eq .classification "3")}}selected{{end}}>
-                                        قائم به
-                                    </option>
-
-                                </select>
+                                <label for="email">اسم المستخدم</label>
+                                <input type="email" name="email" class="form-control" id="email"
+                                       value="{{.username}}"
+                                       placeholder="البريد الالكتروني">
                             </div>
+                            <button class="btn btn-primary mt-3" onclick="changeByEmail()">تأكيد</button>
+                            <a href="/login">مسجل بالبرنامج ؟</a>
+
+                        {{else}}
+                            <div class="form-group">
+                                <label for="username">اسم المستخدم</label>
+                                {{if .users}}
+                                    <select class="form-control js-select2" id="username" name="username">
+                                        <option></option>
+                                        {{range .users}}
+                                            <option value="{{.Username}}">{{.Username}}</option>
+                                        {{end}}
+                                    </select>
+                                {{else}}
+                                    <input type="text" name="username" class="form-control" id="username"
+                                           value="{{.username}}"
+                                           placeholder="اسم المستخدم">
+                                {{end}}
+                            </div>
+                            <div class="form-row">
+                                <div class="col">
+                                    <label for="password">كلمه السر</label>
+                                    <input type="password" name="password" class="form-control" id="password"
+                                           placeholder="كلمه السر">
+                                </div>
+                                <div class="col">
+                                    <label for="passwordVerify">تأكيد كلمه السر</label>
+                                    <input type="password" name="passwordVerify" class="form-control"
+                                           id="passwordVerify"
+                                           placeholder="تأكيد كلمه السر">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminPassword">كلمه السر الخاصه بالوزير</label>
+                                <input type="password" name="adminPassword" class="form-control" id="adminPassword"
+                                       aria-describedby="adminPasswordHelp" placeholder="{{.adminPasswordPlaceholder}}">
+                                <small id="adminPasswordHelp" class="form-text text-muted">
+                                    {{.adminPasswordHelp}}
+                                </small>
+
+                            </div>
+                            {{if .isSignUp}}
+                                <div class="form-group">
+                                    <label for="classification">التصنيف</label>
+                                    <select class="form-control" id="classification" name="classification">
+                                        <option value="1" {{if eq .classification "1"}}selected{{end}}>الوزير</option>
+                                        <option value="2" {{if eq .classification "2"}}selected{{end}}>متابع</option>
+                                        <option value="3"
+                                                {{if or (eq .classification "") (eq .classification "3")}}selected{{end}}>
+                                            قائم به
+                                        </option>
+
+                                    </select>
+                                </div>
+                            {{end}}
+                            <button type="submit" class="btn btn-primary">{{.buttonText}}</button>
+                            <a href="/login">مسجل بالبرنامج ؟</a>
                         {{end}}
-                        <button type="submit" class="btn btn-primary">{{.buttonText}}</button>
-                        <a href="/login">مسجل بالبرنامج ؟</a>
+
                     </form>
-                    {{if .resetPage}}
-                        <button class="btn btn-dark mt-3" onclick="changeByEmail()">تغيير كلمه السر بواسطه البريد
-                            الالكتروني
-                        </button>
-                    {{end}}
                 </article>
             </div> <!-- card.// -->
 
@@ -79,8 +88,8 @@
         });
 
         function changeByEmail() {
-            $.get("/reset-password-by-email", {
-                username: $("#username").val()
+            $.post("/reset-password-by-email", {
+                email: $("#email").val()
             }, function (data) {
                 if (data["status"] === "reload")
                     location.reload();

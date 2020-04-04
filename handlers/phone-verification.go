@@ -14,7 +14,7 @@ import (
 )
 
 // this function serves the userSettings page
-func (db *MyDB) showSettingsPage(c echo.Context) error {
+func (db *MyConfigurations) showSettingsPage(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	username, stringClassification := getUsernameAndClassification(&c)
 	var user models.User
@@ -30,7 +30,7 @@ func (db *MyDB) showSettingsPage(c echo.Context) error {
 		hideEmailVerification = true
 	}
 
-	return c.Render(http.StatusOK, "user-settings.html", echo.Map{
+	returnedValues := echo.Map{
 		"status":                status,                // pass the status of the flash message
 		"message":               message,               // pass the message
 		"phoneNumber":           phoneNumber,           // pass the phone number
@@ -46,11 +46,16 @@ func (db *MyDB) showSettingsPage(c echo.Context) error {
 		"activatedEmail":        user.ValidEmail,
 		"phoneNotifications":    user.PhoneNotifications,
 		"emailNotifications":    user.EmailNotifications,
-	})
+	}
+	if checkIfRequestFromMobileDevice(c) {
+		return c.JSON(http.StatusOK, returnedValues)
+	}
+
+	return c.Render(http.StatusOK, "user-settings.html", returnedValues)
 }
 
 // this function changes the user's phone number
-func (db *MyDB) changePhoneNumber(c echo.Context) error {
+func (db *MyConfigurations) changePhoneNumber(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	db.GormDB.First(&user, userID)
@@ -80,7 +85,7 @@ func (db *MyDB) changePhoneNumber(c echo.Context) error {
 }
 
 // this function sends a verification code for the logged in user
-func (db *MyDB) sendVerificationCode(c echo.Context) error {
+func (db *MyConfigurations) sendVerificationCode(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	db.GormDB.First(&user, userID)
@@ -139,7 +144,7 @@ func sendMessage(phoneNumber, message string) {
 	_, _ = http.Post(requestApi, "", nil) // make the post request
 }
 
-func (db *MyDB) verifyPhoneNumber(c echo.Context) error {
+func (db *MyConfigurations) verifyPhoneNumber(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	var otp models.OTP
@@ -165,7 +170,7 @@ func (db *MyDB) verifyPhoneNumber(c echo.Context) error {
 	})
 }
 
-func (db *MyDB) changeNotifications(c echo.Context) error {
+func (db *MyConfigurations) changeNotifications(c echo.Context) error {
 	userID, _ := getUserStatus(&c)
 	var user models.User
 	db.GormDB.Find(&user, userID)
