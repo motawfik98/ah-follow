@@ -17,6 +17,7 @@ func InitializeRoutes(e *echo.Echo, myConfigurations *MyConfigurations) {
 
 	e.GET("/logout", myConfigurations.logout, ensureLoggedIn)
 	e.GET("/", myConfigurations.index, ensureLoggedIn)
+	e.POST("/save-token", myConfigurations.saveDeviceToken, ensureLoggedIn)
 
 	tasks := e.Group("/tasks", ensureLoggedIn)
 

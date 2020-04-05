@@ -65,6 +65,104 @@
         let classification = {{.classification}};
     </script>
 
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/7.13.2/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+    <script src="https://www.gstatic.com/firebasejs/7.13.2/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.13.2/firebase-messaging.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyB0uUZTlfJPiPE3oobv-dfWgZZtbvwxB6c",
+            authDomain: "ah-follow-test.firebaseapp.com",
+            databaseURL: "https://ah-follow-test.firebaseio.com",
+            projectId: "ah-follow-test",
+            storageBucket: "ah-follow-test.appspot.com",
+            messagingSenderId: "861059843608",
+            appId: "1:861059843608:web:6b2f6631ea5929a339256d",
+            measurementId: "G-VSGQH778YB"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+
+        // Retrieve Firebase Messaging object.
+        const messaging = firebase.messaging();
+
+        // Add the public key generated from the console here.
+        messaging.usePublicVapidKey("BO5v_3TKe7xV6k91IDYleMXt_uTWWxC2IycDWsnzE-rEvAGeI1_KwGAubtVT0MMu6nlCQumj8WvTZtBp_H8Siis");
+
+        // Get Instance ID token. Initially this makes a network call, once retrieved
+        // subsequent calls to getToken will return from cache.
+        messaging.getToken().then((currentToken) => {
+            if (currentToken) {
+                sendTokenToServer(currentToken);
+                console.log(currentToken);
+            } else {
+                // Show permission request.
+                console.log('No Instance ID token available. Request permission to generate one.');
+            }
+        }).catch((err) => {
+            console.log('An error occurred while retrieving token. ', err);
+            console.log('Error retrieving Instance ID token. ', err);
+        });
+
+        // Callback fired if Instance ID token is updated.
+        messaging.onTokenRefresh(() => {
+            messaging.getToken().then((refreshedToken) => {
+                console.log('Token refreshed.');
+                // Indicate that the new Instance ID token has not yet been sent to the
+                // app server.
+                // Send Instance ID token to app server.
+                sendTokenToServer(refreshedToken);
+                // ...
+            }).catch((err) => {
+                console.log('Unable to retrieve refreshed token ', err);
+                console.log('Unable to retrieve refreshed token ', err);
+            });
+        });
+
+        function sendTokenToServer(currentToken) {
+            $.ajax({
+                type: "POST",
+                beforeSend: function (request) {
+                    request.setRequestHeader("fcm-token", currentToken);
+                },
+                url: "/save-token",
+            });
+        }
+
+        // Handle incoming messages. Called when:
+        // - a message is received while the app has focus
+        // - the user clicks on an app notification created by a service worker
+        //   `messaging.setBackgroundMessageHandler` handler.
+        messaging.onMessage((payload) => {
+            console.log('Message received. ', payload);
+            const notificationTitle = payload.notification.title;
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: payload.notification.icon,
+            };
+            if (!("Notification" in window)) {
+                console.log("This browser does not support system notifications");
+            }
+            // Let's check whether notification permissions have already been granted
+            else if (Notification.permission === "granted") {
+                // If it's okay let's create a notification
+                var notification = new Notification(notificationTitle, notificationOptions);
+                notification.onclick = function (event) {
+                    event.preventDefault(); // prevent the browser from focusing the Notification's tab
+                    window.open(payload.fcmOptions.link, '_blank');
+                    notification.close();
+                }
+            }
+        });
+
+    </script>
+
 
     {{template "footer".}}
 

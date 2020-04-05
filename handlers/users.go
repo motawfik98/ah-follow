@@ -64,8 +64,9 @@ func (db *MyConfigurations) performLogin(c echo.Context) error {
 			})
 		}
 		c.SetCookie(&http.Cookie{
-			Name:  "Authorization",
-			Value: token,
+			Name:    "Authorization",
+			Value:   token,
+			Expires: time.Now().Add(time.Hour * 24 * 30),
 		})
 		return c.Redirect(http.StatusFound, "/")
 	}

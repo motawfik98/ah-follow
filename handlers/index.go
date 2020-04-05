@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // this function serves the index page of the program
@@ -21,19 +22,7 @@ func (db *MyConfigurations) index(c echo.Context) error {
 	if hash == "" {
 		hashExist = false
 	}
-	stringToken := c.Request().Header.Get("fcm-token")
-	deviceToken := models.DeviceToken{
-		Token:  stringToken,
-		UserID: userID,
-	}
-	if stringToken != "" {
-		db.GormDB.Where("token = ?", stringToken).First(&deviceToken)
-		if deviceToken.ID != 0 {
-			db.GormDB.Model(&deviceToken).Update("user_id", userID)
-		} else {
-			db.GormDB.Create(&deviceToken)
-		}
-	}
+	_ = db.saveDeviceToken(c)
 	var user models.User
 	db.GormDB.First(&user, userID)
 
@@ -53,6 +42,24 @@ func (db *MyConfigurations) index(c echo.Context) error {
 		return c.JSON(http.StatusOK, returnedValues)
 	}
 	return c.Render(http.StatusOK, "index.html", returnedValues)
+}
+
+func (db *MyConfigurations) saveDeviceToken(c echo.Context) error {
+	userID, _ := getUserStatus(&c) // get the user ID and the classification int from the cookie that is stored
+
+	stringToken := c.Request().Header.Get("fcm-token")
+	deviceToken := models.DeviceToken{
+		Token:  stringToken,
+		UserID: userID,
+	}
+	if stringToken != "" {
+		if err := db.GormDB.Create(&deviceToken).Error; err != nil {
+			db.GormDB.Table("device_tokens").Where("token = ?",
+				stringToken).Updates(map[string]interface{}{
+				"user_id": userID, "deleted_at": nil, "updated_at": time.Now()})
+		}
+	}
+	return nil
 }
 
 func (db *MyConfigurations) GetRecentNotifications(c echo.Context) error {

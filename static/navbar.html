@@ -3,7 +3,7 @@
     <nav class="navbar navbar-expand-md bg-dark navbar-dark justify-content-end mb-3">
         <a class="navbar-brand" href="/">الرئيسيه</a>
         <div class="ml-auto mr-1 text-white">{{.username}} ({{.stringClassification}})</div>
-        <a href="/logout" class="btn btn-success">تسجيل خروج</a>
+        <a class="btn btn-success" onclick="logout()">تسجيل خروج</a>
 
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
             <span class="navbar-toggler-icon"></span>
@@ -29,5 +29,26 @@
             </ul>
         </div>
     </nav>
+
+    <script>
+        function logout() {
+            const messaging = firebase.messaging();
+            messaging.getToken().then((currentToken) => {
+                $.ajax({
+                    type: "GET",
+                    beforeSend: function (request) {
+                        request.setRequestHeader("fcm-token", currentToken);
+                    },
+                    url: "/logout",
+                    success: function (data) {
+                        location.href = "/login";
+                    }
+                })
+            }).catch((err) => {
+                console.log('An error occurred while retrieving token. ', err);
+                console.log('Error retrieving Instance ID token. ', err);
+            });
+        }
+    </script>
 
 {{end}}

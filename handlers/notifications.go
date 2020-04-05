@@ -10,7 +10,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"google.golang.org/api/option"
 	"log"
+	"math/rand"
 	"net/http"
+	"strconv"
 )
 
 // these constants are for the push API (notifications passing)
@@ -47,6 +49,7 @@ func (db *MyConfigurations) registerClientToNotify(c echo.Context) error {
 }
 
 // this function sends notifications to all registered users
+// used 4 times in tasks.go handler file
 func sendNotification(message string, userID uint, db *MyConfigurations, taskLink string) {
 	var subscriptions []models.Subscription
 	db.GormDB.Where("user_id = ?", userID).Find(&subscriptions) // gets all the subscriptions that are found in the database
@@ -74,8 +77,9 @@ func sendNotification(message string, userID uint, db *MyConfigurations, taskLin
 func sendFirebaseNotificationToMultipleUsers(client *messaging.Client, tokens []string, notificationTitle string, task *models.Task) {
 	message := &messaging.MulticastMessage{
 		Notification: &messaging.Notification{
-			Title: notificationTitle,
-			Body:  task.Description,
+			Title:    notificationTitle,
+			Body:     task.Description,
+			ImageURL: "",
 		},
 		Data: map[string]string{
 			"click_action": "FLUTTER_NOTIFICATION_CLICK",
@@ -84,6 +88,11 @@ func sendFirebaseNotificationToMultipleUsers(client *messaging.Client, tokens []
 		Android: &messaging.AndroidConfig{
 			Notification: &messaging.AndroidNotification{
 				Tag: task.Hash,
+			},
+		},
+		Webpush: &messaging.WebpushConfig{
+			FcmOptions: &messaging.WebpushFcmOptions{
+				Link: "/tasks/task/" + task.Hash + "/" + strconv.Itoa(rand.Int())[0:7],
 			},
 		},
 		Tokens: tokens,
@@ -124,7 +133,8 @@ func sendFirebaseNotification(c echo.Context) error {
 	}
 
 	// This registration token comes from the client FCM SDKs.
-	registrationToken := "dLb5Tij_yOo:APA91bFa1aeR5NobZuH0WqzGjrM6iVvUx0PgSzHYdX7KI8Pcx6jTQDafI8CsKE8Y47MiLhzDhFfdv4YlReCcOdkBEjdKxsl62iC47PhUJ0u8GdAV4PbPiSvoyceZ7of-RyOC0Z8lS_8Q"
+	registrationToken := "e6j_l-1SighJr8dV2YEf1H:APA91bE-J6RBa_R0Y4UwN0IxUmvokqj94Hc6unT8bOiyMwaQYNxFoBd8UU_rXWNuPgNzjQfm48w4Owt9uWSFkzgtBHiXosj6UenilN1JHvcLMnwiuy_RrnbWgMNzUxoOIR0zMkCAbtQK"
+	registrationToken2 := "clcBbywmqLE:APA91bFlva8FSzFVA1LIl8Zfr5ESZz1VXvUEPOhzNKzkqbhRo3PlALD52KM38vN_cq4VZlQL226FyG30wLsxRVPE3cNGor6i7ZPIgiXUjiVglW_3Bp-LK1Kdu4NTitDnCaGXJ-kl5WLJ"
 
 	// See documentation on defining a message payload.
 	message := &messaging.MulticastMessage{
@@ -137,7 +147,12 @@ func sendFirebaseNotification(c echo.Context) error {
 			"score":        "850",
 			"time":         "2:45",
 		},
-		Tokens: []string{registrationToken},
+		Webpush: &messaging.WebpushConfig{
+			FcmOptions: &messaging.WebpushFcmOptions{
+				Link: hostDomain,
+			},
+		},
+		Tokens: []string{registrationToken, registrationToken2},
 	}
 
 	// Send a message to the device corresponding to the provided

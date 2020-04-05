@@ -211,7 +211,7 @@ $(document).ready(function () {
             $(row).children().first().addClass(data.seen_status);
         },
         language: {
-            url: '/source-codes/languages/datatables.language.json'
+            url: '/static/source-codes/languages/datatables.language.json'
         },
         order: [[4, 'desc']],
         rowId: "ID",

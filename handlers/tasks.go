@@ -71,10 +71,10 @@ func (db *MyConfigurations) EditTask(c echo.Context) error {
 			// change the final_action and mark the task as unseen
 			db.GormDB.Model(&task).Updates(map[string]interface{}{"final_action": finalAction, "seen": false})
 			// send a notification to the admin informing him
-			pushNotificationLink := "/?hash=" + task.Hash
+			//pushNotificationLink := "/?hash=" + task.Hash
 			var adminsIDs = make([]uint, len(admins))
 			for _, admin := range admins {
-				sendNotification("تم تعديل الاجراء النهائي للتكليف", admin.ID, db, pushNotificationLink)
+				//sendNotification("تم تعديل الاجراء النهائي للتكليف", admin.ID, db, pushNotificationLink)
 				if admin.EmailNotifications {
 					sendEmailNotification(&admin, taskLink, username, "تم تعديل الاجراء النهائي للتكليف")
 				}
@@ -138,7 +138,7 @@ func addFollowersUsers(c echo.Context, db *MyConfigurations, taskToSave models.T
 		if isNew {
 			var user models.User
 			db.GormDB.Find(&user, uid)
-			sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
+			//sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
 			if user.EmailNotifications {
 				sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 			}
@@ -177,7 +177,7 @@ func addWorkingOnUsers(c echo.Context, db *MyConfigurations, task *models.Task, 
 		if userTask.ID == 0 { // if not found create one
 			if classification == 2 {
 				id = models.CreateWorkingOnUserTask(db.GormDB, task.ID, uint(uid), action, finalResponse, followerID)
-				sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
+				//sendNotification("تم اضافه تكليف جديد", uint(uid), db, taskLink)
 				if user.EmailNotifications {
 					sendEmailNotification(&user, taskLink, username, "تم اضافه تكليف جديد")
 				}
@@ -197,7 +197,7 @@ func addWorkingOnUsers(c echo.Context, db *MyConfigurations, task *models.Task, 
 					Updates(map[string]interface{}{"new_from_working_on_user": true})
 				var followerUser models.User
 				db.GormDB.Find(&followerUser, userTask.FollowerID)
-				sendNotification("تم اضافه رد على التكليف من القائم به", userTask.FollowerID, db, taskLink)
+				//sendNotification("تم اضافه رد على التكليف من القائم به", userTask.FollowerID, db, taskLink)
 				if user.EmailNotifications {
 					sendEmailNotification(&followerUser, taskLink, username, "تم اضافه رد على التكليف من القائم به")
 				}
@@ -449,7 +449,7 @@ type dtOutput struct {
 
 func gatherUsersToSendNotifications(db *MyConfigurations, users []uint, notificationTitle string, task *models.Task) {
 	var userDevices []string // get all registered devices for a specific user
-	db.GormDB.Table("device_tokens").Where("user_id IN (?)", users).Pluck("token", &userDevices)
+	db.GormDB.Table("device_tokens").Where("user_id IN (?) AND deleted_at IS NULL", users).Pluck("token", &userDevices)
 	//usersTokens = append(usersTokens, userDevices...)
 	sendFirebaseNotificationToMultipleUsers(db.MessagingClient, userDevices, notificationTitle, task)
 }
